@@ -1,16 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bell, Info } from 'lucide-react';
-import Sidebar from './components/Sidebar.tsx';
-import Dashboard from './components/Dashboard.tsx';
-import ClientList from './components/ClientList.tsx';
-import ClientModal from './components/ClientModal.tsx';
-import { Client, ClientStatus, View } from './types.ts';
-import { INITIAL_CLIENTS } from './constants.ts';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import ClientList from './components/ClientList';
+import ClientModal from './components/ClientModal';
+import { Client, ClientStatus, View } from './types';
+import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
   
+  // Persistência na memória interna (LocalStorage)
   const [clients, setClients] = useState<Client[]>(() => {
     try {
       const saved = localStorage.getItem('devaro_clients_data');
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
+  // Atualiza a memória interna sempre que a lista de clientes mudar
   useEffect(() => {
     localStorage.setItem('devaro_clients_data', JSON.stringify(clients));
   }, [clients]);
@@ -62,9 +64,11 @@ const App: React.FC = () => {
     setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c));
   };
 
+  // Notificação de Testes Expirando (Alertas da Central)
   const testingAlertsCount = clients.filter(client => {
     if (client.status !== ClientStatus.TESTING) return false;
     const diffDays = (new Date().getTime() - new Date(client.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    // Alerta se estiver entre o 5º e o 7º dia de teste
     return diffDays >= 5 && diffDays <= 7;
   }).length;
 

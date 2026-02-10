@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Client } from "../types.ts";
+import { Client } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
