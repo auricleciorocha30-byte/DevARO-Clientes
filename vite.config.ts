@@ -8,6 +8,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    emptyOutDir: true,
+    sourcemap: false,
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      },
+    },
+  },
+  server: {
+    port: 3000,
+    host: true
   }
 });
