@@ -1,10 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "../types";
 
-// Acesso seguro à variável de ambiente para evitar crash no Vercel
 const getApiKey = () => {
   try {
-    return process?.env?.API_KEY || "";
+    return (window as any).process?.env?.API_KEY || "";
   } catch {
     return "";
   }
@@ -27,7 +26,7 @@ export const generatePersonalizedMessage = async (client: Client, type: 'reminde
     3. Um tom prestativo.
     4. Mencione que o link de pagamento está disponível.
     
-    Seja conciso para WhatsApp. Não use emojis em excesso.
+    Seja conciso para WhatsApp.
   `;
 
   try {
@@ -37,7 +36,7 @@ export const generatePersonalizedMessage = async (client: Client, type: 'reminde
     });
     return response.text || "Olá! Gostaria de lembrar sobre o vencimento da sua mensalidade DevARO.";
   } catch (error) {
-    console.error("Error generating message:", error);
+    console.error("AI Error:", error);
     return "Olá! Sua mensalidade está próxima do vencimento. Entre em contato para receber seu link de pagamento.";
   }
 };
