@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Client, ClientStatus } from '../types';
+import { Client, ClientStatus } from '../types.ts';
 
 interface ClientModalProps {
   onClose: () => void;

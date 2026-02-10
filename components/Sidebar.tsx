@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { LayoutDashboard, Users, Zap, Settings, Code2 } from 'lucide-react';
-import { View } from '../types';
+import { View } from '../types.ts';
 
 interface SidebarProps {
   currentView: View;

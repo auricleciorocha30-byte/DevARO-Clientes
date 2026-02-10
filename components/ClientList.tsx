@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { Search, Plus, Mail, MessageCircle, Trash2, Users, ChevronDown, MapPin, Edit2 } from 'lucide-react';
-import { Client, ClientStatus } from '../types';
-import { generatePersonalizedMessage } from '../services/geminiService';
+import { Client, ClientStatus } from '../types.ts';
+import { generatePersonalizedMessage } from '../services/geminiService.ts';
 
 interface ClientListProps {
   clients: Client[];
