@@ -1,8 +1,16 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Acesso seguro à variável de ambiente para evitar crash no Vercel
+const getApiKey = () => {
+  try {
+    return process?.env?.API_KEY || "";
+  } catch {
+    return "";
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export const generatePersonalizedMessage = async (client: Client, type: 'reminder' | 'overdue'): Promise<string> => {
   const prompt = `
