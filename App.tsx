@@ -77,22 +77,26 @@ const App: React.FC = () => {
       case 'settings':
         return (
           <div className="max-w-2xl bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6">Configurações DevARO</h2>
+            <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações DevARO</h2>
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div>
-                  <p className="font-semibold">Link de Pagamento Padrão</p>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Link de Pagamento Padrão</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                    defaultValue="https://pay.devaro.com/checkout" 
+                  />
+                  <button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors">
+                    Salvar
+                  </button>
                 </div>
-                <input type="text" className="bg-white border rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500" defaultValue="https://pay.devaro.com/checkout" />
+                <p className="mt-2 text-xs text-slate-500">Este link será usado como base para as mensagens enviadas aos clientes.</p>
               </div>
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div>
-                  <p className="font-semibold">Notificações por E-mail</p>
-                  <p className="text-sm text-slate-500">Enviar cópia das comunicações para o admin.</p>
-                </div>
-                <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1">
-                   <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
-                </div>
+              
+              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <p className="text-sm font-medium text-blue-800">Sobre o Sistema</p>
+                <p className="text-xs text-blue-600 mt-1">Versão 1.0.0. Gestão manual de assinaturas focada em Apps DevARO.</p>
               </div>
             </div>
           </div>
