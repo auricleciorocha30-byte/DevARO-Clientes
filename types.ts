@@ -1,4 +1,3 @@
-
 export enum ClientStatus {
   ACTIVE = 'ACTIVE',
   LATE = 'LATE',

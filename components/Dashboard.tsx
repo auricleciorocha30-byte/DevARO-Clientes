@@ -15,12 +15,13 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
   const testingClients = clients.filter(c => c.status === ClientStatus.TESTING).length;
   const totalRevenue = clients.reduce((acc, c) => acc + (c.status === ClientStatus.ACTIVE ? c.monthlyValue : 0), 0);
 
+  // Lógica de Alertas para Clientes em Teste (7 dias)
   const alerts = clients.filter(client => {
     if (client.status !== ClientStatus.TESTING) return false;
     const created = new Date(client.createdAt).getTime();
     const now = new Date().getTime();
     const diffDays = (now - created) / (1000 * 60 * 60 * 24);
-    return diffDays >= 5 && diffDays <= 7;
+    return diffDays >= 5 && diffDays <= 7; // Alerta nos últimos 2 dias de teste
   });
 
   const stats = [
@@ -39,6 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
 
   return (
     <div className="space-y-6">
+      {/* Central de Alertas */}
       {alerts.length > 0 && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl shadow-sm">
           <div className="flex items-center gap-3">

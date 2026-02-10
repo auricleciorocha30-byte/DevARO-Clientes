@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LayoutDashboard, Users, Settings, Code2 } from 'lucide-react';
 import { View } from '../types';
@@ -19,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
     <aside className="w-64 bg-slate-900 text-white h-screen fixed left-0 top-0 flex flex-col shadow-xl">
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         <div className="p-2 bg-blue-600 rounded-lg">
-          <span className="text-white font-bold"><Code2 size={24} /></span>
+          <Code2 size={24} />
         </div>
         <span className="font-bold text-xl tracking-tight">DevARO</span>
       </div>

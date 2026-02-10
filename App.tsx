@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -10,22 +9,15 @@ import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
-  
   const [clients, setClients] = useState<Client[]>(() => {
-    try {
-      const saved = localStorage.getItem('devaro_clients_data');
-      return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
-    } catch (e) {
-      console.error("Failed to load clients from localStorage", e);
-      return INITIAL_CLIENTS;
-    }
+    const saved = localStorage.getItem('devaro_clients');
+    return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
   });
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('devaro_clients_data', JSON.stringify(clients));
+    localStorage.setItem('devaro_clients', JSON.stringify(clients));
   }, [clients]);
 
   const handleAddOrEditClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
@@ -95,10 +87,10 @@ const App: React.FC = () => {
               </div>
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <div>
-                  <p className="font-semibold">Notificações Administrativas</p>
-                  <p className="text-sm text-slate-500">Alertas de vencimento e novos cadastros.</p>
+                  <p className="font-semibold">Notificações por E-mail</p>
+                  <p className="text-sm text-slate-500">Enviar cópia das comunicações para o admin.</p>
                 </div>
-                <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1 cursor-pointer">
+                <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1">
                    <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
                 </div>
               </div>
@@ -110,13 +102,6 @@ const App: React.FC = () => {
     }
   };
 
-  const getTitle = () => {
-    if (view === 'dashboard') return 'Painel Geral';
-    if (view === 'clients') return 'Gerenciar Clientes';
-    if (view === 'settings') return 'Configurações';
-    return 'DevARO';
-  };
-
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <Sidebar currentView={view} setView={setView} />
@@ -124,19 +109,21 @@ const App: React.FC = () => {
       <main className="flex-1 ml-64 p-8">
         <header className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{getTitle()}</h1>
-            <p className="text-slate-500">Gestão de Portfólio DevARO.</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {view === 'dashboard' ? 'Painel Geral' : 
+               view === 'clients' ? 'Gerenciar Clientes' : 'Configurações'}
+            </h1>
+            <p className="text-slate-500">Bem-vindo de volta ao centro de controle DevARO.</p>
           </div>
           
           <div className="flex items-center gap-4">
             <div 
               onClick={() => setView('dashboard')}
               className="relative p-2 bg-white rounded-xl shadow-sm border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
-              title="Alertas de Teste"
             >
               <Bell size={20} className="text-slate-600" />
               {testingAlertsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold">
                   {testingAlertsCount}
                 </span>
               )}
