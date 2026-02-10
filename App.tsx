@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bell, Info } from 'lucide-react';
-import Sidebar from './components/Sidebar.tsx';
-import Dashboard from './components/Dashboard.tsx';
-import ClientList from './components/ClientList.tsx';
-import ClientModal from './components/ClientModal.tsx';
-import { Client, ClientStatus, View } from './types.ts';
-import { INITIAL_CLIENTS } from './constants.ts';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import ClientList from './components/ClientList';
+import ClientModal from './components/ClientModal';
+import { Client, ClientStatus, View } from './types';
+import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
