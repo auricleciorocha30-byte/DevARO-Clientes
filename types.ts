@@ -11,7 +11,7 @@ export interface Client {
   name: string;
   email: string;
   whatsapp: string;
-  address: string; // Novo campo
+  address: string;
   appName: string;
   monthlyValue: number;
   dueDay: number;
@@ -20,12 +20,4 @@ export interface Client {
   createdAt: string;
 }
 
-export interface AutomationLog {
-  id: string;
-  clientId: string;
-  type: 'email' | 'whatsapp';
-  sentAt: string;
-  message: string;
-}
-
-export type View = 'dashboard' | 'clients' | 'automations' | 'settings';
+export type View = 'dashboard' | 'clients' | 'settings';

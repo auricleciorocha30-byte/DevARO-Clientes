@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Info } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/ClientList';
@@ -82,18 +82,6 @@ const App: React.FC = () => {
             onUpdateStatus={handleUpdateStatus}
           />
         );
-      case 'automations':
-        return (
-          <div className="bg-white p-12 rounded-2xl text-center border border-dashed border-slate-300">
-             <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-               <Info className="text-blue-500" size={32} />
-             </div>
-             <h2 className="text-2xl font-bold text-slate-800 mb-2">Painel de Automações</h2>
-             <p className="text-slate-500 max-w-md mx-auto">
-               Aqui você poderá configurar gatilhos automáticos para enviar mensagens no dia anterior ao vencimento e após 2 dias de atraso.
-             </p>
-          </div>
-        );
       case 'settings':
         return (
           <div className="max-w-2xl bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
@@ -107,10 +95,10 @@ const App: React.FC = () => {
               </div>
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <div>
-                  <p className="font-semibold">Notificações por E-mail</p>
-                  <p className="text-sm text-slate-500">Enviar cópia das automações para o admin.</p>
+                  <p className="font-semibold">Notificações Administrativas</p>
+                  <p className="text-sm text-slate-500">Alertas de vencimento e novos cadastros.</p>
                 </div>
-                <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1">
+                <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1 cursor-pointer">
                    <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
                 </div>
               </div>
@@ -122,6 +110,13 @@ const App: React.FC = () => {
     }
   };
 
+  const getTitle = () => {
+    if (view === 'dashboard') return 'Painel Geral';
+    if (view === 'clients') return 'Gerenciar Clientes';
+    if (view === 'settings') return 'Configurações';
+    return 'DevARO';
+  };
+
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <Sidebar currentView={view} setView={setView} />
@@ -129,12 +124,8 @@ const App: React.FC = () => {
       <main className="flex-1 ml-64 p-8">
         <header className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {view === 'dashboard' ? 'Painel Geral' : 
-               view === 'clients' ? 'Gerenciar Clientes' : 
-               view === 'automations' ? 'Automações Inteligentes' : 'Configurações'}
-            </h1>
-            <p className="text-slate-500">Bem-vindo ao CRM DevARO - Gestão de Apps Mensais.</p>
+            <h1 className="text-2xl font-bold text-slate-900">{getTitle()}</h1>
+            <p className="text-slate-500">Gestão de Portfólio DevARO.</p>
           </div>
           
           <div className="flex items-center gap-4">
