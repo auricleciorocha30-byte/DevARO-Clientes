@@ -22,7 +22,6 @@
             margin: 0;
             -webkit-tap-highlight-color: transparent;
         }
-        /* Ocultar barra de rolagem mas manter funcionalidade */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -31,10 +30,17 @@
             scrollbar-width: none;
         }
     </style>
-    <!-- Polyfill para evitar erro de 'process is not defined' -->
+    
+    <!-- Polyfill Robusto para Process -->
     <script>
-      window.process = { env: { API_KEY: "" } };
+      window.process = window.process || {
+        env: { 
+          NODE_ENV: 'production',
+          API_KEY: '' 
+        }
+      };
     </script>
+
     <script type="importmap">
     {
       "imports": {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Download, Upload, ShieldCheck, AlertTriangle, Menu, Check } from 'lucide-react';
+import { Bell, Menu, Check } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/ClientList';
@@ -14,37 +14,52 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLinkSaved, setIsLinkSaved] = useState(false);
   
-  // Estados persistidos
+  // Estados persistidos com segurança
   const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('devaro_clients');
-    return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
+    try {
+      const saved = localStorage.getItem('devaro_clients');
+      return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
+    } catch (e) {
+      console.error("Erro ao carregar clientes:", e);
+      return INITIAL_CLIENTS;
+    }
   });
 
   const [paymentLink, setPaymentLink] = useState(() => {
     return localStorage.getItem('devaro_payment_link') || 'https://pay.devaro.com/checkout';
   });
 
-  // Novos estados para Encarte Digital
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('devaro_products');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('devaro_products');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Erro ao carregar produtos:", e);
+      return [];
+    }
   });
 
   const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>(() => {
-    const saved = localStorage.getItem('devaro_catalog_config');
-    return saved ? JSON.parse(saved) : { 
-      address: 'Rua DevARO, 123 - Centro', 
-      whatsapp: '5511999999999',
-      companyName: 'DevARO Apps' 
-    };
+    try {
+      const saved = localStorage.getItem('devaro_catalog_config');
+      return saved ? JSON.parse(saved) : { 
+        address: 'Rua DevARO, 123 - Centro', 
+        whatsapp: '5511999999999',
+        companyName: 'DevARO Apps' 
+      };
+    } catch (e) {
+      return { 
+        address: 'Rua DevARO, 123 - Centro', 
+        whatsapp: '5511999999999',
+        companyName: 'DevARO Apps' 
+      };
+    }
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Efeitos de persistência
   useEffect(() => {
     localStorage.setItem('devaro_clients', JSON.stringify(clients));
   }, [clients]);
@@ -66,9 +81,7 @@ const App: React.FC = () => {
   const handleAddOrEditClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
     if (editingClient) {
       setClients(prev => prev.map(c => 
-        c.id === editingClient.id 
-          ? { ...c, ...clientData } 
-          : c
+        c.id === editingClient.id ? { ...c, ...clientData } : c
       ));
     } else {
       const newClient: Client = {
@@ -98,7 +111,6 @@ const App: React.FC = () => {
     setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c));
   };
 
-  // Lógica de Produtos
   const handleAddProduct = (prodData: Omit<Product, 'id'>) => {
     const newProd: Product = {
       ...prodData,
@@ -183,7 +195,6 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-            {/* ... Rest of settings ... */}
           </div>
         );
       default:
