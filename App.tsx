@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, Download, Upload, ShieldCheck, AlertTriangle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/ClientList';
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     localStorage.setItem('devaro_clients', JSON.stringify(clients));
@@ -54,6 +55,51 @@ const App: React.FC = () => {
     setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c));
   };
 
+  // --- Funções de Backup e Restauração ---
+  const handleExportBackup = () => {
+    try {
+      const dataStr = JSON.stringify(clients, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `devaro_backup_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    } catch (error) {
+      alert('Erro ao gerar backup. Tente novamente.');
+    }
+  };
+
+  const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedData = JSON.parse(content);
+
+        // Validação básica: deve ser um array
+        if (Array.isArray(importedData)) {
+          if (confirm(`Atenção: Restaurar o backup irá sobrescrever seus ${clients.length} clientes atuais por ${importedData.length} novos registros. Deseja continuar?`)) {
+            setClients(importedData);
+            alert('Backup restaurado com sucesso!');
+          }
+        } else {
+          alert('Arquivo de backup inválido. O conteúdo deve ser um array de clientes.');
+        }
+      } catch (error) {
+        alert('Erro ao ler o arquivo. Verifique se é um JSON válido.');
+      }
+      // Reseta o input para permitir importar o mesmo arquivo novamente se necessário
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   const testingAlertsCount = clients.filter(client => {
     if (client.status !== ClientStatus.TESTING) return false;
     const diffDays = (new Date().getTime() - new Date(client.createdAt).getTime()) / (1000 * 60 * 60 * 24);
@@ -76,27 +122,70 @@ const App: React.FC = () => {
         );
       case 'settings':
         return (
-          <div className="max-w-2xl bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações DevARO</h2>
-            <div className="space-y-6">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Link de Pagamento Padrão</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                    defaultValue="https://pay.devaro.com/checkout" 
-                  />
-                  <button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors">
-                    Salvar
-                  </button>
+          <div className="max-w-2xl space-y-6">
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+              <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações DevARO</h2>
+              <div className="space-y-6">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Link de Pagamento Padrão</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                      defaultValue="https://pay.devaro.com/checkout" 
+                    />
+                    <button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors">
+                      Salvar
+                    </button>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">Este link será usado como base para as mensagens enviadas aos clientes.</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2 mb-6">
+                <ShieldCheck className="text-blue-600" size={24} />
+                <h2 className="text-xl font-bold text-slate-900">Dados e Segurança</h2>
               </div>
               
-              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                <p className="text-sm font-medium text-blue-800">Sobre o Sistema</p>
-                <p className="text-xs text-blue-600 mt-1">Versão 1.0.0. Gestão manual de assinaturas focada em Apps DevARO.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 border border-slate-100 bg-slate-50 rounded-xl">
+                  <h3 className="font-bold text-slate-800 mb-1">Backup dos Dados</h3>
+                  <p className="text-xs text-slate-500 mb-4">Baixe uma cópia de segurança de todos os seus clientes em formato JSON.</p>
+                  <button 
+                    onClick={handleExportBackup}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-100 transition-colors shadow-sm"
+                  >
+                    <Download size={16} />
+                    Fazer Backup Agora
+                  </button>
+                </div>
+
+                <div className="p-4 border border-amber-100 bg-amber-50/30 rounded-xl">
+                  <h3 className="font-bold text-slate-800 mb-1">Restaurar Sistema</h3>
+                  <p className="text-xs text-slate-500 mb-4">Importe um arquivo de backup para restaurar seus dados. Isso substituirá os dados atuais.</p>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleImportBackup}
+                    accept=".json"
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
+                  >
+                    <Upload size={16} />
+                    Restaurar do Arquivo
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <AlertTriangle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  <strong>Dica de Segurança:</strong> Recomendamos fazer um backup semanal de seus clientes. Os dados são armazenados localmente no seu navegador e podem ser perdidos se você limpar o cache ou formatar o dispositivo.
+                </p>
               </div>
             </div>
           </div>
