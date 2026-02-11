@@ -32,8 +32,13 @@ const ClientList: React.FC<ClientListProps> = ({
   const handleSendReminder = async (client: Client, channel: 'email' | 'whatsapp') => {
     setIsGenerating(client.id);
     const type = client.status === ClientStatus.LATE ? 'overdue' : 'reminder';
-    const message = await generatePersonalizedMessage(client, type, paymentLink);
+    let message = await generatePersonalizedMessage(client, type, paymentLink);
     
+    // Verificação de segurança: Se a IA esqueceu o link, nós adicionamos manualmente
+    if (!message.includes(paymentLink)) {
+      message += `\n\nLink para pagamento: ${paymentLink}`;
+    }
+
     if (channel === 'whatsapp') {
       const url = `https://wa.me/${client.whatsapp}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
