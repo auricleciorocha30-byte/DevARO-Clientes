@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Mail, MessageCircle, Trash2, Users, ChevronDown, MapPin, Edit2, DollarSign, Smartphone } from 'lucide-react';
+import { Search, Plus, Mail, MessageCircle, Trash2, Users, ChevronDown, MapPin, Edit2, DollarSign, Smartphone, AlertCircle } from 'lucide-react';
 import { Client, ClientStatus } from '../types';
 import { generatePersonalizedMessage } from '../services/geminiService';
 
@@ -23,10 +23,39 @@ const ClientList: React.FC<ClientListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.appName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.address.toLowerCase().includes(searchTerm.toLowerCase())
+  // Lógica de Ordenação Prioritária
+  const getSortedClients = (clientsList: Client[]) => {
+    const today = new Date().getDate();
+
+    return [...clientsList].sort((a, b) => {
+      // 1. Prioridade por Status
+      const statusPriority = {
+        [ClientStatus.LATE]: 0,
+        [ClientStatus.ACTIVE]: 1,
+        [ClientStatus.TESTING]: 2,
+        [ClientStatus.PAUSED]: 3,
+      };
+
+      if (statusPriority[a.status] !== statusPriority[b.status]) {
+        return statusPriority[a.status] - statusPriority[b.status];
+      }
+
+      // 2. Se ambos forem ACTIVE ou LATE, ordena pelo dia de vencimento mais próximo
+      const getDistance = (day: number) => {
+        if (day >= today) return day - today; // Vence ainda este mês
+        return day + 31 - today; // Venceu ou vence mês que vem
+      };
+
+      return getDistance(a.dueDay) - getDistance(b.dueDay);
+    });
+  };
+
+  const filteredClients = getSortedClients(
+    clients.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.appName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.address.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const handleSendReminder = async (client: Client, channel: 'email' | 'whatsapp') => {
@@ -34,7 +63,6 @@ const ClientList: React.FC<ClientListProps> = ({
     const type = client.status === ClientStatus.LATE ? 'overdue' : 'reminder';
     let message = await generatePersonalizedMessage(client, type, paymentLink);
     
-    // Verificação de segurança: Se a IA esqueceu o link, nós adicionamos manualmente
     if (!message.includes(paymentLink)) {
       message += `\n\nLink para pagamento: ${paymentLink}`;
     }
@@ -71,10 +99,10 @@ const ClientList: React.FC<ClientListProps> = ({
         {Object.entries(ClientStatus).map(([key, value]) => (
           <button
             key={key}
-            onClick={() => onUpdateStatus(client.id, value)}
+            onClick={() => onUpdateStatus(client.id, value as ClientStatus)}
             className={`w-full text-left px-4 py-3 text-xs font-bold hover:bg-slate-50 transition-colors ${client.status === value ? 'text-blue-600 bg-blue-50/50' : 'text-slate-600'}`}
           >
-            {statusConfig[value].label}
+            {statusConfig[value as ClientStatus].label}
           </button>
         ))}
       </div>
@@ -104,15 +132,20 @@ const ClientList: React.FC<ClientListProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:hidden">
-        {filteredClients.map((client) => (
-          <div key={client.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+        {filteredClients.map((client, index) => (
+          <div key={client.id} className={`bg-white p-5 rounded-2xl shadow-sm border transition-all ${client.status === ClientStatus.LATE ? 'border-red-200 bg-red-50/10' : 'border-slate-100'} space-y-4`}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-lg">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg ${client.status === ClientStatus.LATE ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                   {client.name.charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="font-bold text-slate-900 truncate">{client.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 truncate">{client.name}</h4>
+                    {index < 3 && client.status !== ClientStatus.PAUSED && (
+                      <AlertCircle size={14} className={client.status === ClientStatus.LATE ? 'text-red-500 animate-pulse' : 'text-amber-500'} />
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 truncate">{client.email}</p>
                 </div>
               </div>
@@ -137,12 +170,11 @@ const ClientList: React.FC<ClientListProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <button 
-                onClick={() => handleOpenRoute(client.address)}
-                className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg"
-              >
-                <MapPin size={14} /> VER ROTA
-              </button>
+              <div className="flex items-center gap-2">
+                 <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${client.status === ClientStatus.LATE ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                   Vence dia {client.dueDay}
+                 </span>
+              </div>
               
               <div className="flex items-center gap-2">
                 <button
@@ -154,13 +186,13 @@ const ClientList: React.FC<ClientListProps> = ({
                 <button
                   disabled={isGenerating === client.id}
                   onClick={() => handleSendReminder(client, 'whatsapp')}
-                  className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 disabled:opacity-50"
+                  className={`p-2.5 rounded-xl transition-all ${client.status === ClientStatus.LATE ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-green-50 text-green-600 hover:bg-green-100'} disabled:opacity-50`}
                 >
                   <MessageCircle size={18} />
                 </button>
                 <button
                   onClick={() => onDelete(client.id)}
-                  className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"
+                  className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-500"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -174,7 +206,7 @@ const ClientList: React.FC<ClientListProps> = ({
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Cliente</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Prioridade / Cliente</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">App / Valor</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Vencimento</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
@@ -182,22 +214,20 @@ const ClientList: React.FC<ClientListProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredClients.map((client) => (
-              <tr key={client.id} className="hover:bg-slate-50/50 transition-colors">
+            {filteredClients.map((client, index) => (
+              <tr key={client.id} className={`hover:bg-slate-50/50 transition-colors ${client.status === ClientStatus.LATE ? 'bg-red-50/30' : ''}`}>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                    <div className="text-[10px] font-bold text-slate-300 w-4">#{index + 1}</div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold flex-shrink-0 ${client.status === ClientStatus.LATE ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                       {client.name.charAt(0)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-slate-900 truncate">{client.name}</p>
-                        <button 
-                          onClick={() => handleOpenRoute(client.address)}
-                          className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[10px] font-black uppercase"
-                        >
-                          <MapPin size={10} /> Rota
-                        </button>
+                        {client.status === ClientStatus.LATE && (
+                          <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">Urgente</span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500 truncate">{client.email}</p>
                     </div>
@@ -208,7 +238,7 @@ const ClientList: React.FC<ClientListProps> = ({
                   <p className="text-xs text-slate-500">R$ {client.monthlyValue.toFixed(2)}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-bold text-slate-900 underline decoration-blue-200 decoration-2 underline-offset-4">
+                  <span className={`text-sm font-bold ${client.status === ClientStatus.LATE ? 'text-red-600 underline decoration-red-200' : 'text-slate-900 underline decoration-blue-200'} decoration-2 underline-offset-4`}>
                     Dia {client.dueDay}
                   </span>
                 </td>
@@ -218,8 +248,14 @@ const ClientList: React.FC<ClientListProps> = ({
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onEdit(client)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Edit2 size={16} /></button>
-                    <button disabled={isGenerating === client.id} onClick={() => handleSendReminder(client, 'whatsapp')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><MessageCircle size={16} /></button>
-                    <button onClick={() => onDelete(client.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    <button 
+                      disabled={isGenerating === client.id} 
+                      onClick={() => handleSendReminder(client, 'whatsapp')} 
+                      className={`p-2 rounded-lg transition-colors ${client.status === ClientStatus.LATE ? 'bg-red-600 text-white hover:bg-red-700' : 'text-green-600 hover:bg-green-50'}`}
+                    >
+                      <MessageCircle size={16} />
+                    </button>
+                    <button onClick={() => onDelete(client.id)} className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-lg"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
