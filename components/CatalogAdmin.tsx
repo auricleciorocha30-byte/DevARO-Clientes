@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, MessageSquare, ExternalLink, Smartphone, DollarSign, Check, ShoppingBag, Link as LinkIcon } from 'lucide-react';
+import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, MessageSquare, ExternalLink, Smartphone, DollarSign, Check, ShoppingBag, Link as LinkIcon, Copy } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod } from '../types';
 
 interface CatalogAdminProps {
@@ -21,6 +21,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
 }) => {
   const [localConfig, setLocalConfig] = useState(config);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     name: '',
     description: '',
@@ -40,6 +41,13 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCopyLink = () => {
+    const url = window.location.origin + window.location.pathname + '?view=showcase';
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const togglePaymentMethod = (method: PaymentMethod) => {
@@ -70,18 +78,41 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     <div className="space-y-8 pb-20">
       {/* Configurações do Encarte */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-xl font-bold text-slate-900">Configurações do Encarte</h2>
-          <button 
-            onClick={onPreview}
-            className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:underline"
-          >
-            <ExternalLink size={16} /> Ver Encarte Público
-          </button>
+          <div className="flex items-center gap-3">
+             <button 
+              onClick={handleCopyLink}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
+                copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Link Copiado!' : 'Copiar Link'}
+            </button>
+            <button 
+              onClick={onPreview}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-all border border-blue-100"
+            >
+              <ExternalLink size={16} /> Abrir em Nova Guia
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Endereço da Empresa</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome da Empresa no Encarte</label>
+            <div className="relative">
+              <ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                value={localConfig.companyName}
+                onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Endereço</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -89,19 +120,6 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                 value={localConfig.address}
                 onChange={e => setLocalConfig({...localConfig, address: e.target.value})}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">WhatsApp de Suporte</label>
-            <div className="relative">
-              <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="tel"
-                placeholder="5511..."
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                value={localConfig.whatsapp}
-                onChange={e => setLocalConfig({...localConfig, whatsapp: e.target.value})}
               />
             </div>
           </div>

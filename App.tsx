@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Menu, Check } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -10,7 +10,12 @@ import { Client, ClientStatus, View, Product, CatalogConfig } from './types';
 import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<View>('dashboard');
+  // Detecta se deve abrir diretamente no Encarte via URL ?view=catalog
+  const [view, setView] = useState<View>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('view') as View) || 'dashboard';
+  });
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLinkSaved, setIsLinkSaved] = useState(false);
   
@@ -157,7 +162,10 @@ const App: React.FC = () => {
             onSaveConfig={setCatalogConfig}
             onAddProduct={handleAddProduct}
             onDeleteProduct={handleDeleteProduct}
-            onPreview={() => setView('showcase')}
+            onPreview={() => {
+              const url = window.location.origin + window.location.pathname + '?view=showcase';
+              window.open(url, '_blank');
+            }}
           />
         );
       case 'showcase':
@@ -165,7 +173,10 @@ const App: React.FC = () => {
           <CatalogShowcase 
             products={products}
             config={catalogConfig}
-            onBack={() => setView('catalog')}
+            onBack={() => {
+              // Se foi aberto via link direto, volta para o dashboard ou limpa a URL
+              window.location.href = window.location.origin + window.location.pathname;
+            }}
             onSelectProduct={handleSelectProductFromShowcase}
           />
         );
@@ -210,12 +221,14 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
-      <Sidebar 
-        currentView={view} 
-        setView={setView} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
-      />
+      {view !== 'showcase' && (
+        <Sidebar 
+          currentView={view} 
+          setView={setView} 
+          isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)} 
+        />
+      )}
       
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${view === 'showcase' ? '' : 'lg:ml-64'}`}>
         {view !== 'showcase' && (
