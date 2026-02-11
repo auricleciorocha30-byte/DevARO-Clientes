@@ -33,6 +33,7 @@ export interface Product {
   photo: string; // Base64
   paymentMethods: PaymentMethod[];
   paymentLink?: string;
+  externalLink?: string; // Novo campo para link externo (ex: checkout ou landing page)
 }
 
 export interface CatalogConfig {

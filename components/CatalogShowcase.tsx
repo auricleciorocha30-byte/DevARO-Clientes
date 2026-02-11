@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ArrowLeft, MessageSquare, MapPin, CheckCircle2, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, MessageSquare, MapPin, CheckCircle2, ShoppingCart, ExternalLink } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -10,6 +10,19 @@ interface CatalogShowcaseProps {
 }
 
 const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onBack, onSelectProduct }) => {
+  const handleAction = (product: Product) => {
+    if (product.externalLink && product.externalLink.trim() !== '') {
+      // Abre o link externo em uma nova aba
+      const url = product.externalLink.startsWith('http') 
+        ? product.externalLink 
+        : `https://${product.externalLink}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      // Comportamento padrão: abre o formulário de cadastro interno
+      onSelectProduct(product);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20">
       {/* Header do Encarte */}
@@ -90,10 +103,11 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
                   </div>
                   
                   <button 
-                    onClick={() => onSelectProduct(product)}
+                    onClick={() => handleAction(product)}
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
                   >
-                    <ShoppingCart size={18} /> EU QUERO!
+                    {product.externalLink ? <ExternalLink size={18} /> : <ShoppingCart size={18} />}
+                    {product.externalLink ? 'SAIBAR MAIS' : 'EU QUERO!'}
                   </button>
                 </div>
               </div>

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, MessageSquare, ExternalLink, Smartphone, DollarSign, Check, ShoppingBag } from 'lucide-react';
+import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, MessageSquare, ExternalLink, Smartphone, DollarSign, Check, ShoppingBag, Link as LinkIcon } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod } from '../types';
 
 interface CatalogAdminProps {
@@ -28,7 +27,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     price: 0,
     photo: '',
     paymentMethods: [PaymentMethod.PIX],
-    paymentLink: ''
+    paymentLink: '',
+    externalLink: ''
   });
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +61,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       price: 0,
       photo: '',
       paymentMethods: [PaymentMethod.PIX],
-      paymentLink: ''
+      paymentLink: '',
+      externalLink: ''
     });
   };
 
@@ -187,6 +188,21 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                   </div>
 
                   <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Link de Destino (Opcional)</label>
+                    <div className="relative">
+                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="text"
+                        placeholder="https://seu-link-externo.com"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newProduct.externalLink}
+                        onChange={e => setNewProduct({...newProduct, externalLink: e.target.value})}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Se preenchido, o botão "EU QUERO!" abrirá este link em uma nova aba.</p>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Formas de Pagamento</label>
                     <div className="flex flex-wrap gap-2">
                       {Object.values(PaymentMethod).map(method => (
@@ -206,19 +222,6 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                       ))}
                     </div>
                   </div>
-
-                  {newProduct.paymentMethods.includes(PaymentMethod.LINK) && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">URL do Link de Pagamento</label>
-                      <input 
-                        type="text"
-                        placeholder="https://..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                        value={newProduct.paymentLink}
-                        onChange={e => setNewProduct({...newProduct, paymentLink: e.target.value})}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
               
@@ -253,7 +256,10 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 </div>
               </div>
               <div className="p-5">
-                <h4 className="font-bold text-slate-900 mb-1">{product.name}</h4>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-slate-900 truncate pr-2">{product.name}</h4>
+                  {product.externalLink && <LinkIcon size={12} className="text-blue-500" title="Link externo ativo" />}
+                </div>
                 <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{product.description}</p>
                 <div className="flex flex-wrap gap-1">
                   {product.paymentMethods.map(m => (
