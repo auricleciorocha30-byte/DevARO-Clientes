@@ -9,9 +9,17 @@ interface ClientListProps {
   onEdit: (client: Client) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: ClientStatus) => void;
+  paymentLink: string;
 }
 
-const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelete, onUpdateStatus }) => {
+const ClientList: React.FC<ClientListProps> = ({ 
+  clients, 
+  onAdd, 
+  onEdit, 
+  onDelete, 
+  onUpdateStatus,
+  paymentLink 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
 
@@ -24,7 +32,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelet
   const handleSendReminder = async (client: Client, channel: 'email' | 'whatsapp') => {
     setIsGenerating(client.id);
     const type = client.status === ClientStatus.LATE ? 'overdue' : 'reminder';
-    const message = await generatePersonalizedMessage(client, type);
+    const message = await generatePersonalizedMessage(client, type, paymentLink);
     
     if (channel === 'whatsapp') {
       const url = `https://wa.me/${client.whatsapp}?text=${encodeURIComponent(message)}`;
@@ -70,13 +78,12 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelet
 
   return (
     <div className="space-y-6">
-      {/* Search and Action Bar */}
       <div className="flex flex-col gap-4">
         <div className="relative w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input
             type="text"
-            placeholder="Nome, app ou endereço..."
+            placeholder="Buscar por nome, app ou endereço..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm text-base"
@@ -91,7 +98,6 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelet
         </button>
       </div>
 
-      {/* MOBILE VIEW: Cards */}
       <div className="grid grid-cols-1 gap-4 lg:hidden">
         {filteredClients.map((client) => (
           <div key={client.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
@@ -130,7 +136,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelet
                 onClick={() => handleOpenRoute(client.address)}
                 className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg"
               >
-                <MapPin size={14} /> Ver Rota
+                <MapPin size={14} /> VER ROTA
               </button>
               
               <div className="flex items-center gap-2">
@@ -159,7 +165,6 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onAdd, onEdit, onDelet
         ))}
       </div>
 
-      {/* DESKTOP VIEW: Table */}
       <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 border-b border-slate-100">

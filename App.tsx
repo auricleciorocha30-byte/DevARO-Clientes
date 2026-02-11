@@ -124,6 +124,7 @@ const App: React.FC = () => {
             onEdit={handleEditClick}
             onDelete={handleDeleteClient}
             onUpdateStatus={handleUpdateStatus}
+            paymentLink={paymentLink}
           />
         );
       case 'settings':
