@@ -1,15 +1,10 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "../types";
 
-const getApiKey = () => {
-  try {
-    return (window as any).process?.env?.API_KEY || "";
-  } catch {
-    return "";
-  }
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
+// Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+// Obtained exclusively from process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generatePersonalizedMessage = async (
   client: Client, 
@@ -35,10 +30,13 @@ export const generatePersonalizedMessage = async (
   `;
 
   try {
+    // Must use ai.models.generateContent to query GenAI with both the model name and prompt.
+    // Using gemini-3-flash-preview for basic text task.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
+    // Use response.text property directly to extract string output.
     return response.text || `Olá ${client.name}! Lembrete da mensalidade do ${client.appName}. Você pode pagar por aqui: ${paymentLink}`;
   } catch (error) {
     console.error("AI Error:", error);

@@ -19,4 +19,26 @@ export interface Client {
   createdAt: string;
 }
 
-export type View = 'dashboard' | 'clients' | 'settings';
+export enum PaymentMethod {
+  LINK = 'LINK',
+  PIX = 'PIX',
+  DELIVERY = 'DELIVERY'
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  photo: string; // Base64
+  paymentMethods: PaymentMethod[];
+  paymentLink?: string;
+}
+
+export interface CatalogConfig {
+  address: string;
+  whatsapp: string;
+  companyName: string;
+}
+
+export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings';

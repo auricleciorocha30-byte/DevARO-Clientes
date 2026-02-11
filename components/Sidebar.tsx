@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Settings, Code2, X } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag } from 'lucide-react';
 import { View } from '../types';
 
 interface SidebarProps {
@@ -13,6 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
   const menuItems = [
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clients' as View, label: 'Clientes', icon: Users },
+    { id: 'catalog' as View, label: 'Encarte Digital', icon: ShoppingBag },
     { id: 'settings' as View, label: 'Configurações', icon: Settings },
   ];
 
@@ -20,6 +21,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
     setView(view);
     if (window.innerWidth < 1024) onClose();
   };
+
+  if (currentView === 'showcase') return null;
 
   return (
     <>
