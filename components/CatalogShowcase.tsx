@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ArrowLeft, MessageSquare, MapPin, CheckCircle2, ShoppingCart, ExternalLink } from 'lucide-react';
+import { ShoppingBag, MessageSquare, MapPin, CheckCircle2, ShoppingCart, ExternalLink } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -27,13 +27,6 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
     <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20">
       {/* Header do Encarte */}
       <header className="w-full bg-blue-600 text-white p-6 md:p-10 text-center relative rounded-b-[40px] shadow-xl shadow-blue-500/20 max-w-4xl">
-        <button 
-          onClick={onBack}
-          className="absolute left-4 top-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        
         <div className="flex flex-col items-center gap-4">
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-blue-600 shadow-xl">
              <ShoppingBag size={40} />
