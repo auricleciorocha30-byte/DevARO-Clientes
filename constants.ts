@@ -1,6 +1,7 @@
 
 import { Client, ClientStatus } from './types';
 
+// Adding paymentLink to satisfy the Client interface requirements which were missing in the initial data
 export const INITIAL_CLIENTS: Client[] = [
   {
     id: '1',
@@ -12,6 +13,7 @@ export const INITIAL_CLIENTS: Client[] = [
     monthlyValue: 150.00,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
+    paymentLink: 'https://pay.devaro.com/link1',
     createdAt: new Date().toISOString()
   },
   {
@@ -24,6 +26,7 @@ export const INITIAL_CLIENTS: Client[] = [
     monthlyValue: 89.90,
     dueDay: 5,
     status: ClientStatus.LATE,
+    paymentLink: 'https://pay.devaro.com/link1',
     createdAt: new Date().toISOString()
   },
   {
@@ -36,6 +39,7 @@ export const INITIAL_CLIENTS: Client[] = [
     monthlyValue: 499.00,
     dueDay: 25,
     status: ClientStatus.ACTIVE,
+    paymentLink: 'https://pay.devaro.com/link1',
     createdAt: new Date().toISOString()
   }
 ];

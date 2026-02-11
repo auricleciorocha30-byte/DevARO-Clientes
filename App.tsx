@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Menu, Check } from 'lucide-react';
+import { Bell, Menu, Check, Save } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/ClientList';
 import ClientModal from './components/ClientModal';
 import CatalogAdmin from './components/CatalogAdmin';
 import CatalogShowcase from './components/CatalogShowcase';
-import { Client, ClientStatus, View, Product, CatalogConfig } from './types';
+import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks } from './types';
 import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
-  // Detecta se deve abrir diretamente no Encarte via URL ?view=catalog
   const [view, setView] = useState<View>(() => {
     const params = new URLSearchParams(window.location.search);
     return (params.get('view') as View) || 'dashboard';
@@ -19,19 +18,27 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLinkSaved, setIsLinkSaved] = useState(false);
   
-  // Estados persistidos com segurança
   const [clients, setClients] = useState<Client[]>(() => {
     try {
       const saved = localStorage.getItem('devaro_clients');
       return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
     } catch (e) {
-      console.error("Erro ao carregar clientes:", e);
       return INITIAL_CLIENTS;
     }
   });
 
-  const [paymentLink, setPaymentLink] = useState(() => {
-    return localStorage.getItem('devaro_payment_link') || 'https://pay.devaro.com/checkout';
+  const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>(() => {
+    try {
+      const saved = localStorage.getItem('devaro_payment_links');
+      return saved ? JSON.parse(saved) : {
+        link1: 'https://pay.devaro.com/link1',
+        link2: '',
+        link3: '',
+        link4: ''
+      };
+    } catch (e) {
+      return { link1: '', link2: '', link3: '', link4: '' };
+    }
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
@@ -39,7 +46,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('devaro_products');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
-      console.error("Erro ao carregar produtos:", e);
       return [];
     }
   });
@@ -53,11 +59,7 @@ const App: React.FC = () => {
         companyName: 'DevARO Apps' 
       };
     } catch (e) {
-      return { 
-        address: 'Rua DevARO, 123 - Centro', 
-        whatsapp: '5511999999999',
-        companyName: 'DevARO Apps' 
-      };
+      return { address: '', whatsapp: '', companyName: 'DevARO Apps' };
     }
   });
 
@@ -65,29 +67,20 @@ const App: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('devaro_clients', JSON.stringify(clients));
-  }, [clients]);
+  useEffect(() => localStorage.setItem('devaro_clients', JSON.stringify(clients)), [clients]);
+  useEffect(() => localStorage.setItem('devaro_products', JSON.stringify(products)), [products]);
+  useEffect(() => localStorage.setItem('devaro_catalog_config', JSON.stringify(catalogConfig)), [catalogConfig]);
+  useEffect(() => localStorage.setItem('devaro_payment_links', JSON.stringify(paymentLinks)), [paymentLinks]);
 
-  useEffect(() => {
-    localStorage.setItem('devaro_products', JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('devaro_catalog_config', JSON.stringify(catalogConfig));
-  }, [catalogConfig]);
-
-  const handleSavePaymentLink = () => {
-    localStorage.setItem('devaro_payment_link', paymentLink);
+  const handleSavePaymentLinks = () => {
+    localStorage.setItem('devaro_payment_links', JSON.stringify(paymentLinks));
     setIsLinkSaved(true);
     setTimeout(() => setIsLinkSaved(false), 2000);
   };
 
   const handleAddOrEditClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
     if (editingClient) {
-      setClients(prev => prev.map(c => 
-        c.id === editingClient.id ? { ...c, ...clientData } : c
-      ));
+      setClients(prev => prev.map(c => c.id === editingClient.id ? { ...c, ...clientData } : c));
     } else {
       const newClient: Client = {
         ...clientData,
@@ -101,39 +94,25 @@ const App: React.FC = () => {
     setInitialClientData(null);
   };
 
-  const handleEditClick = (client: Client) => {
-    setEditingClient(client);
-    setIsModalOpen(true);
-  };
-
   const handleDeleteClient = (id: string) => {
-    if (confirm('Deseja realmente remover este cliente?')) {
-      setClients(clients.filter(c => c.id !== id));
-    }
-  };
-
-  const handleUpdateStatus = (id: string, status: ClientStatus) => {
-    setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+    if (confirm('Deseja realmente remover este cliente?')) setClients(clients.filter(c => c.id !== id));
   };
 
   const handleAddProduct = (prodData: Omit<Product, 'id'>) => {
-    const newProd: Product = {
-      ...prodData,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setProducts([...products, newProd]);
+    setProducts([...products, { ...prodData, id: Math.random().toString(36).substr(2, 9) }]);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if(confirm('Remover produto do encarte?')) {
-      setProducts(products.filter(p => p.id !== id));
-    }
+  const handleUpdateProduct = (id: string, prodData: Omit<Product, 'id'>) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...prodData } : p));
   };
 
   const handleSelectProductFromShowcase = (product: Product) => {
+    // Resolve o link de pagamento baseado no ID selecionado no produto
+    const resolvedLink = paymentLinks[product.paymentLinkId] || paymentLinks.link1;
     setInitialClientData({
       appName: product.name,
       monthlyValue: product.price,
+      paymentLink: resolvedLink,
       status: ClientStatus.TESTING
     });
     setIsModalOpen(true);
@@ -141,75 +120,71 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (view) {
-      case 'dashboard':
-        return <Dashboard clients={clients} />;
-      case 'clients':
-        return (
-          <ClientList 
-            clients={clients} 
-            onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClient}
-            onUpdateStatus={handleUpdateStatus}
-            paymentLink={paymentLink}
-          />
-        );
-      case 'catalog':
-        return (
-          <CatalogAdmin 
-            products={products}
-            config={catalogConfig}
-            onSaveConfig={setCatalogConfig}
-            onAddProduct={handleAddProduct}
-            onDeleteProduct={handleDeleteProduct}
-            onPreview={() => {
-              const url = window.location.origin + window.location.pathname + '?view=showcase';
-              window.open(url, '_blank');
-            }}
-          />
-        );
-      case 'showcase':
-        return (
-          <CatalogShowcase 
-            products={products}
-            config={catalogConfig}
-            onBack={() => {
-              // Se foi aberto via link direto, volta para o dashboard ou limpa a URL
-              window.location.href = window.location.origin + window.location.pathname;
-            }}
-            onSelectProduct={handleSelectProductFromShowcase}
-          />
-        );
-      case 'settings':
-        return (
-          <div className="max-w-2xl space-y-6 pb-20">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações DevARO</h2>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Link de Pagamento Padrão</label>
-                <div className="flex flex-col sm:flex-row gap-2">
+      case 'dashboard': return <Dashboard clients={clients} />;
+      case 'clients': return (
+        <ClientList 
+          clients={clients} 
+          onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
+          onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
+          onDelete={handleDeleteClient}
+          onUpdateStatus={(id, status) => setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c))}
+          paymentLink={paymentLinks.link1} // Fallback, mas o ClientList agora usa client.paymentLink
+        />
+      );
+      case 'catalog': return (
+        <CatalogAdmin 
+          products={products}
+          config={catalogConfig}
+          globalLinks={paymentLinks}
+          onSaveConfig={setCatalogConfig}
+          onAddProduct={handleAddProduct}
+          onUpdateProduct={handleUpdateProduct}
+          onDeleteProduct={(id) => confirm('Remover?') && setProducts(products.filter(p => p.id !== id))}
+          onPreview={() => window.open(window.location.origin + window.location.pathname + '?view=showcase', '_blank')}
+        />
+      );
+      case 'showcase': return (
+        <CatalogShowcase 
+          products={products}
+          config={catalogConfig}
+          onBack={() => window.location.href = window.location.origin + window.location.pathname}
+          onSelectProduct={handleSelectProductFromShowcase}
+        />
+      );
+      case 'settings': return (
+        <div className="max-w-3xl space-y-6 pb-20">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações de Pagamento DevARO</h2>
+            <p className="text-sm text-slate-500 mb-6">Configure até 4 links globais para associar aos seus produtos.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
+                <div key={key} className="space-y-2">
+                  <label className="block text-xs font-black text-slate-400 uppercase">Link de Pagamento {idx + 1}</label>
                   <input 
                     type="text" 
-                    className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                    value={paymentLink}
-                    onChange={(e) => setPaymentLink(e.target.value)}
-                    placeholder="https://..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                    value={paymentLinks[key]}
+                    onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
+                    placeholder={`https://checkout.com/plano-${idx + 1}`}
                   />
-                  <button 
-                    onClick={handleSavePaymentLink}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      isLinkSaved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    {isLinkSaved ? <><Check size={18} /> Salvo</> : 'Salvar'}
-                  </button>
                 </div>
-              </div>
+              ))}
             </div>
+
+            <button 
+              onClick={handleSavePaymentLinks}
+              className={`mt-8 w-full md:w-auto px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                isLinkSaved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {isLinkSaved ? <Check size={20} /> : <Save size={20} />}
+              {isLinkSaved ? 'Configurações Salvas' : 'Salvar Todos os Links'}
+            </button>
           </div>
-        );
-      default:
-        return <Dashboard clients={clients} />;
+        </div>
+      );
+      default: return <Dashboard clients={clients} />;
     }
   };
 
@@ -222,48 +197,24 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
       {view !== 'showcase' && (
-        <Sidebar 
-          currentView={view} 
-          setView={setView} 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
-        />
+        <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       )}
-      
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${view === 'showcase' ? '' : 'lg:ml-64'}`}>
         {view !== 'showcase' && (
           <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 p-4 lg:p-6">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl active:scale-95"
-                >
-                  <Menu size={24} />
-                </button>
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                  {view === 'dashboard' ? 'Início' : view === 'clients' ? 'Clientes' : view === 'catalog' ? 'Encarte Digital' : 'Ajustes'}
-                </h1>
+                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl active:scale-95"><Menu size={24} /></button>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">{view === 'dashboard' ? 'Início' : view === 'clients' ? 'Clientes' : view === 'catalog' ? 'Encarte' : 'Ajustes'}</h1>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <div onClick={() => setView('dashboard')} className="relative p-2.5 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-200 transition-colors">
-                  <Bell size={20} className="text-slate-600" />
-                  {testingAlertsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
-                      {testingAlertsCount}
-                    </span>
-                  )}
-                </div>
+              <div className="relative p-2.5 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => setView('dashboard')}>
+                <Bell size={20} className="text-slate-600" />
+                {testingAlertsCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold animate-pulse">{testingAlertsCount}</span>}
               </div>
             </div>
           </header>
         )}
-
-        <div className={`${view === 'showcase' ? '' : 'p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1'}`}>
-          {renderContent()}
-        </div>
-
+        <div className={`${view === 'showcase' ? '' : 'p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1'}`}>{renderContent()}</div>
         {isModalOpen && (
           <ClientModal 
             onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 

@@ -16,6 +16,7 @@ export interface Client {
   dueDay: number;
   status: ClientStatus;
   lastPaymentDate?: string;
+  paymentLink: string; // Link específico deste cliente
   createdAt: string;
 }
 
@@ -32,14 +33,21 @@ export interface Product {
   price: number;
   photo: string; // Base64
   paymentMethods: PaymentMethod[];
-  paymentLink?: string;
-  externalLink?: string; // Novo campo para link externo (ex: checkout ou landing page)
+  paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4'; // Identificador do link global usado
+  externalLink?: string; 
 }
 
 export interface CatalogConfig {
   address: string;
   whatsapp: string;
   companyName: string;
+}
+
+export interface GlobalPaymentLinks {
+  link1: string;
+  link2: string;
+  link3: string;
+  link4: string;
 }
 
 export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings';

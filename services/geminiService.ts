@@ -1,12 +1,13 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "../types";
 
-// Função para obter o cliente AI de forma segura, evitando erro no carregamento inicial
-const getAIClient = () => {
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
-  return new GoogleGenAI({ apiKey });
-};
+// Always use the required initialization format with a named parameter and process.env.API_KEY.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * Generates a personalized message for WhatsApp using Gemini.
+ */
 export const generatePersonalizedMessage = async (
   client: Client, 
   type: 'reminder' | 'overdue',
@@ -22,11 +23,14 @@ export const generatePersonalizedMessage = async (
   `;
 
   try {
-    const ai = getAIClient();
+    // Using ai.models.generateContent directly with model name and contents prompt.
+    // Selecting gemini-3-flash-preview for basic text task.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
+    
+    // Using the .text property directly (it is a property, not a method).
     return response.text || `Olá ${client.name}! Lembrete do ${client.appName}. Link: ${paymentLink}`;
   } catch (error) {
     console.error("AI Error:", error);
