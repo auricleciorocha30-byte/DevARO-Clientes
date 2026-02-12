@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DevARO CRM</title>
     
-    <!-- Polyfill de Processo ANTES de qualquer outro script -->
+    <!-- Polyfill de Processo -->
     <script>
       (function() {
+        // Preserva process.env se já existir (injetado pelo host)
+        const existingEnv = (window.process && window.process.env) ? window.process.env : {};
         window.process = {
           env: { 
             NODE_ENV: 'production',
-            API_KEY: '' 
+            ...existingEnv
           },
           cwd: function() { return '/'; },
           nextTick: function(fn) { setTimeout(fn, 0); }
@@ -68,7 +70,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- No Vercel, o Vite transpila o index.tsx para .js. Se estiver servindo estático, browsers não leem .tsx -->
     <script type="module" src="index.tsx"></script>
 </body>
 </html>
