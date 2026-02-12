@@ -18,6 +18,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
     monthlyValue: 0,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
+    paymentLink: '',
   });
 
   useEffect(() => {
@@ -31,6 +32,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
         monthlyValue: initialData.monthlyValue || 0,
         dueDay: (initialData as Client).dueDay || 10,
         status: initialData.status || ClientStatus.ACTIVE,
+        paymentLink: initialData.paymentLink || '',
       });
     }
   }, [initialData]);
@@ -116,6 +118,9 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                 <span className="font-bold text-slate-700">{formData.appName || 'Selecione um app'}</span>
                 <span className="text-blue-600 font-black">R$ {formData.monthlyValue.toFixed(2)}</span>
               </div>
+              {formData.paymentLink && (
+                <p className="mt-2 text-[9px] text-blue-400 truncate opacity-70">Link: {formData.paymentLink}</p>
+              )}
             </div>
 
             {!initialData?.appName && (

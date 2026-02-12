@@ -67,6 +67,17 @@ const App: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
 
+  // Sincroniza view com URL
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (view === 'dashboard') {
+      url.searchParams.delete('view');
+    } else {
+      url.searchParams.set('view', view);
+    }
+    window.history.pushState({}, '', url.toString());
+  }, [view]);
+
   useEffect(() => localStorage.setItem('devaro_clients', JSON.stringify(clients)), [clients]);
   useEffect(() => localStorage.setItem('devaro_products', JSON.stringify(products)), [products]);
   useEffect(() => localStorage.setItem('devaro_catalog_config', JSON.stringify(catalogConfig)), [catalogConfig]);
@@ -107,7 +118,6 @@ const App: React.FC = () => {
   };
 
   const handleSelectProductFromShowcase = (product: Product) => {
-    // Resolve o link de pagamento baseado no ID selecionado no produto
     const resolvedLink = paymentLinks[product.paymentLinkId] || paymentLinks.link1;
     setInitialClientData({
       appName: product.name,
@@ -128,7 +138,7 @@ const App: React.FC = () => {
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
           onDelete={handleDeleteClient}
           onUpdateStatus={(id, status) => setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c))}
-          paymentLink={paymentLinks.link1} // Fallback, mas o ClientList agora usa client.paymentLink
+          paymentLink={paymentLinks.link1}
         />
       );
       case 'catalog': return (
@@ -140,14 +150,14 @@ const App: React.FC = () => {
           onAddProduct={handleAddProduct}
           onUpdateProduct={handleUpdateProduct}
           onDeleteProduct={(id) => confirm('Remover?') && setProducts(products.filter(p => p.id !== id))}
-          onPreview={() => window.open(window.location.origin + window.location.pathname + '?view=showcase', '_blank')}
+          onPreview={() => setView('showcase')}
         />
       );
       case 'showcase': return (
         <CatalogShowcase 
           products={products}
           config={catalogConfig}
-          onBack={() => window.location.href = window.location.origin + window.location.pathname}
+          onBack={() => setView('catalog')}
           onSelectProduct={handleSelectProductFromShowcase}
         />
       );
