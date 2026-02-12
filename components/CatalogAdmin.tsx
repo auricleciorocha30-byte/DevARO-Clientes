@@ -80,39 +80,52 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     <div className="space-y-8 pb-20">
       {/* Configurações do Encarte */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <h2 className="text-xl font-bold text-slate-900">Identidade Visual do Encarte</h2>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Configuração do Encarte</h2>
+            <p className="text-xs text-slate-500 mt-1">Personalize como os clientes verão seus produtos.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
              <button onClick={() => {
                 const url = window.location.origin + window.location.pathname + '?view=showcase';
                 navigator.clipboard.writeText(url);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
-             }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+             }} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
               {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiado!' : 'Copiar Link'}
             </button>
-            <button onClick={onPreview} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold border border-blue-100"><ExternalLink size={16} /> Ver Online</button>
+            <button onClick={onPreview} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold border border-blue-100 active:scale-95">
+              <ExternalLink size={16} /> Ver Online
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" placeholder="Nome da Empresa" className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
-          <input type="text" placeholder="Endereço" className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
+            <input type="text" placeholder="Ex: DevARO Apps" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
+            <input type="text" placeholder="Cidade - Estado" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
+          </div>
         </div>
-        <button onClick={() => onSaveConfig(localConfig)} className="mt-4 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all">Salvar Identidade</button>
+        <button onClick={() => onSaveConfig(localConfig)} className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all shadow-lg shadow-blue-600/20">
+          Salvar Identidade
+        </button>
       </div>
 
       {/* Formulário de Produto */}
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Produtos e Planos</h2>
-          {!showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-lg"><Plus size={18} /> Novo Item</button>}
+        <div className="flex items-center justify-between mb-6 px-1">
+          <h2 className="text-xl font-bold text-slate-900">Meus Produtos</h2>
+          {!showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl active:scale-95 shadow-md"><Plus size={18} /> Novo</button>}
         </div>
 
         {showProductForm && (
           <div className="mb-8 bg-white p-6 rounded-2xl shadow-xl border-2 border-blue-100 animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">{editingProductId ? 'Editar Plano' : 'Novo Plano'}</h3>
-              <button onClick={resetForm} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+              <h3 className="text-lg font-bold">{editingProductId ? 'Editar Produto' : 'Novo Produto'}</h3>
+              <button onClick={resetForm} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -121,42 +134,52 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
             }} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <input required placeholder="Nome do App/Produto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                  <textarea required rows={3} placeholder="Descrição" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
-                  <input required type="number" step="0.01" placeholder="Valor Mensal" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                  <input required placeholder="Nome do App/Produto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                  <textarea required rows={3} placeholder="Descrição curta para o encarte" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                    <input required type="number" step="0.01" placeholder="0,00" className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-xs font-black text-slate-400 uppercase mb-3">Escolha o Link de Pagamento</label>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3">Vincular Link de Pagamento</label>
                     <div className="grid grid-cols-2 gap-2">
                       {(['link1', 'link2', 'link3', 'link4'] as const).map((id, idx) => (
                         <button
                           key={id}
                           type="button"
                           onClick={() => setNewProduct({...newProduct, paymentLinkId: id})}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all ${newProduct.paymentLinkId === id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                          className={`px-3 py-2.5 rounded-lg text-xs font-bold border transition-all ${newProduct.paymentLinkId === id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
                         >
-                          Link {idx + 1}
+                          Plano {idx + 1}
                         </button>
                       ))}
                     </div>
-                    {newProduct.paymentLinkId && (
-                      <p className="mt-2 text-[10px] text-slate-400 truncate">URL: {globalLinks[newProduct.paymentLinkId] || 'Não configurado'}</p>
-                    )}
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                  <div className="flex items-center gap-4 p-2">
+                    <div className="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                       {newProduct.photo ? <img src={newProduct.photo} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={24} />}
                     </div>
-                    <label className="cursor-pointer px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600">Upload Foto<input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} /></label>
+                    <div>
+                      <label className="cursor-pointer px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors inline-block">
+                        Selecionar Imagem
+                        <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                      </label>
+                      <p className="text-[10px] text-slate-400 mt-2">Recomendado: 800x600px</p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Salvar Plano</button>
-                <button type="button" onClick={resetForm} className="px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl">Cancelar</button>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-50">
+                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all">
+                  SALVAR PRODUTO
+                </button>
+                <button type="button" onClick={resetForm} className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
+                  CANCELAR
+                </button>
               </div>
             </form>
           </div>
@@ -164,23 +187,43 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map(product => (
-            <div key={product.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm group relative">
-              <div className="h-40 bg-slate-50 relative overflow-hidden">
-                {product.photo && <img src={product.photo} className="w-full h-full object-cover" />}
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <button onClick={() => handleEditClick(product)} className="p-2 bg-white/90 rounded-lg shadow-sm text-blue-600 hover:bg-white"><Edit2 size={14} /></button>
-                  <button onClick={() => onDeleteProduct(product.id)} className="p-2 bg-white/90 rounded-lg shadow-sm text-red-600 hover:bg-white"><Trash2 size={14} /></button>
+            <div key={product.id} className="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-md transition-all">
+              <div className="h-44 bg-slate-50 relative overflow-hidden">
+                {product.photo ? (
+                  <img src={product.photo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-200">
+                    <ShoppingBag size={48} />
+                  </div>
+                )}
+                <div className="absolute top-3 right-3 flex gap-2">
+                  <button onClick={() => handleEditClick(product)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={16} /></button>
+                  <button onClick={() => onDeleteProduct(product.id)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={16} /></button>
                 </div>
               </div>
-              <div className="p-4">
-                <h4 className="font-bold text-slate-900 mb-1">{product.name}</h4>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-blue-600 font-black text-sm">R$ {product.price.toFixed(2)}</span>
-                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase">Link {product.paymentLinkId.replace('link', '')}</span>
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-bold text-slate-900 line-clamp-1">{product.name}</h4>
+                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">Link {product.paymentLinkId.replace('link', '')}</span>
+                </div>
+                <p className="text-xs text-slate-500 line-clamp-2 mb-4 min-h-[32px]">{product.description}</p>
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Mensalidade</span>
+                    <span className="text-blue-600 font-black text-lg">R$ {product.price.toFixed(2)}</span>
+                  </div>
+                  <ShoppingBag className="text-slate-100" size={24} />
                 </div>
               </div>
             </div>
           ))}
+          
+          {products.length === 0 && !showProductForm && (
+            <button onClick={() => setShowProductForm(true)} className="aspect-[4/3] rounded-[24px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all group">
+               <Plus className="group-hover:scale-110 transition-transform" size={32} />
+               <span className="font-bold">Adicionar Primeiro Item</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

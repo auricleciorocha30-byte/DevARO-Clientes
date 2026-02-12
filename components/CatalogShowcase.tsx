@@ -21,16 +21,20 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
     }
   };
 
-  const isPublicView = new URLSearchParams(window.location.search).get('view') === 'showcase';
+  // Detecta se é o acesso público direto via URL ou navegação interna
+  const params = new URLSearchParams(window.location.search);
+  const isPublicUrl = params.get('view') === 'showcase' && !window.opener && window.history.length <= 1;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20 relative">
-      {!isPublicView && (
+      {/* Botão de Voltar: Sempre visível se houver função onBack e não for um acesso externo direto */}
+      {!isPublicUrl && (
         <button 
           onClick={onBack}
-          className="fixed top-4 left-4 z-50 p-3 bg-white/90 backdrop-blur shadow-lg rounded-full text-slate-600 hover:bg-white active:scale-95 transition-all lg:hidden"
+          className="fixed top-4 left-4 z-[60] p-3 bg-white shadow-2xl rounded-2xl text-slate-700 hover:bg-slate-50 active:scale-90 transition-all border border-slate-200 flex items-center gap-2 font-bold text-sm"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
+          <span className="hidden sm:inline">Voltar ao Admin</span>
         </button>
       )}
 
