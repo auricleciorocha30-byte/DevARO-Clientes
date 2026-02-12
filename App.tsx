@@ -44,7 +44,13 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('devaro_products');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved) as Product[];
+      // Migração: garante que paymentLinkId exista em todos os itens
+      return parsed.map(p => ({
+        ...p,
+        paymentLinkId: p.paymentLinkId || 'link1'
+      }));
     } catch (e) {
       return [];
     }
@@ -67,7 +73,6 @@ const App: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
 
-  // Sincroniza view com URL
   useEffect(() => {
     const url = new URL(window.location.href);
     if (view === 'dashboard') {
@@ -118,7 +123,7 @@ const App: React.FC = () => {
   };
 
   const handleSelectProductFromShowcase = (product: Product) => {
-    const resolvedLink = paymentLinks[product.paymentLinkId] || paymentLinks.link1;
+    const resolvedLink = paymentLinks[product.paymentLinkId || 'link1'] || paymentLinks.link1;
     setInitialClientData({
       appName: product.name,
       monthlyValue: product.price,

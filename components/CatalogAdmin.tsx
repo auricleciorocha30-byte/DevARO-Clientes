@@ -55,7 +55,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       price: product.price,
       photo: product.photo,
       paymentMethods: product.paymentMethods,
-      paymentLinkId: product.paymentLinkId,
+      paymentLinkId: product.paymentLinkId || 'link1',
       externalLink: product.externalLink || ''
     });
     setShowProductForm(true);
@@ -114,7 +114,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
         </button>
       </div>
 
-      {/* Formulário de Produto */}
+      {/* Meus Produtos */}
       <div>
         <div className="flex items-center justify-between mb-6 px-1">
           <h2 className="text-xl font-bold text-slate-900">Meus Produtos</h2>
@@ -168,7 +168,6 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                         Selecionar Imagem
                         <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                       </label>
-                      <p className="text-[10px] text-slate-400 mt-2">Recomendado: 800x600px</p>
                     </div>
                   </div>
                 </div>
@@ -204,7 +203,9 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-bold text-slate-900 line-clamp-1">{product.name}</h4>
-                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">Link {product.paymentLinkId.replace('link', '')}</span>
+                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">
+                    Link {(product.paymentLinkId || 'link1').replace('link', '')}
+                  </span>
                 </div>
                 <p className="text-xs text-slate-500 line-clamp-2 mb-4 min-h-[32px]">{product.description}</p>
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
