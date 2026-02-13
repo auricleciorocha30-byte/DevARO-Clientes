@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, Check, ShoppingBag, Link as LinkIcon, Copy, X, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, Check, ShoppingBag, Link as LinkIcon, Copy, X, ExternalLink, Loader2 } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod, GlobalPaymentLinks } from '../types';
 
 interface CatalogAdminProps {
@@ -7,9 +7,9 @@ interface CatalogAdminProps {
   config: CatalogConfig;
   globalLinks: GlobalPaymentLinks;
   onSaveConfig: (config: CatalogConfig) => void;
-  onAddProduct: (product: Omit<Product, 'id'>) => void;
-  onUpdateProduct: (id: string, product: Omit<Product, 'id'>) => void;
-  onDeleteProduct: (id: string) => void;
+  onAddProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  onUpdateProduct: (id: string, product: Omit<Product, 'id'>) => Promise<void>;
+  onDeleteProduct: (id: string) => Promise<void>;
   onPreview: () => void;
 }
 
@@ -26,6 +26,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   const [localConfig, setLocalConfig] = useState(config);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
@@ -74,6 +75,23 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       paymentLinkId: 'link1',
       externalLink: ''
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (editingProductId) {
+        await onUpdateProduct(editingProductId, newProduct);
+      } else {
+        await onAddProduct(newProduct);
+      }
+      resetForm();
+    } catch (error) {
+      alert('Erro ao salvar o produto no banco de dados. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -127,11 +145,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
               <h3 className="text-lg font-bold">{editingProductId ? 'Editar Produto' : 'Novo Produto'}</h3>
               <button onClick={resetForm} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              editingProductId ? onUpdateProduct(editingProductId, newProduct) : onAddProduct(newProduct);
-              resetForm();
-            }} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <input required placeholder="Nome do App/Produto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
@@ -173,8 +187,12 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-50">
-                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all">
-                  SALVAR PRODUTO
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:bg-slate-400"
+                >
+                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : 'SALVAR PRODUTO'}
                 </button>
                 <button type="button" onClick={resetForm} className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
                   CANCELAR
