@@ -1,3 +1,4 @@
+
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4cpa7j-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require');
@@ -34,7 +35,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Tabela de Produtos
+    // Tabela de Produtos (JSONB para métodos de pagamento)
     await sql(`
       CREATE TABLE IF NOT EXISTS products (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -48,13 +49,6 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Migração de segurança: Garante que a coluna seja JSONB se a tabela já existia como TEXT[]
-    try {
-      await sql(`ALTER TABLE products ALTER COLUMN payment_methods TYPE JSONB USING payment_methods::jsonb`);
-    } catch (e) {
-      // Ignora erro se a coluna já for JSONB ou se a migração não for necessária
-    }
-
     // Tabela de Configurações
     await sql(`
       CREATE TABLE IF NOT EXISTS settings (
@@ -63,14 +57,14 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Usuário padrão
+    // Usuário padrão de acesso
     await sql(`
       INSERT INTO users (email, password, name)
       VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
       ON CONFLICT (email) DO NOTHING;
     `);
 
-    console.log('Neon Database pronta.');
+    console.log('Neon Database pronta e tabelas verificadas.');
   } catch (error) {
     console.error('Falha crítica ao iniciar banco:', error);
   }
@@ -93,9 +87,6 @@ export const NeonService = {
       return result.length > 0 ? result[0] : null;
     } catch (error: any) {
       console.error('Erro no registro de usuário:', error);
-      if (error.message && error.message.includes('unique constraint')) {
-        throw new Error('Este e-mail já está cadastrado.');
-      }
       throw error;
     }
   },
@@ -107,12 +98,11 @@ export const NeonService = {
   
   async addClient(c: any) {
     try {
-      const result = await sql(`
+      return await sql(`
         INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
-      return result;
     } catch (error) {
       console.error('Erro ao salvar cliente:', error);
       throw error;
@@ -121,13 +111,12 @@ export const NeonService = {
 
   async updateClient(id: string, c: any) {
     try {
-      const result = await sql(`
+      return await sql(`
         UPDATE clients 
         SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
         WHERE id=$10
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
-      return result;
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);
       throw error;
@@ -149,42 +138,36 @@ export const NeonService = {
 
   async addProduct(p: any) {
     try {
-      // Usando casting explícito para JSONB ($5::jsonb)
+      console.log('Tentando salvar produto no Neon:', p.name);
       const result = await sql(`
         INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
         RETURNING *
       `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink]);
-      console.log('Produto salvo com sucesso no Neon');
+      console.log('Sucesso ao salvar produto!');
       return result;
-    } catch (error) {
-      console.error('Erro Neon ao salvar produto:', error);
+    } catch (error: any) {
+      console.error('ERRO POSTGRES (addProduct):', error.message, error);
       throw error;
     }
   },
 
   async updateProduct(id: string, p: any) {
     try {
-      const result = await sql(`
+      return await sql(`
         UPDATE products 
         SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5::jsonb, payment_link_id=$6, external_link=$7
         WHERE id=$8
         RETURNING *
       `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink, id]);
-      return result;
-    } catch (error) {
-      console.error('Erro Neon ao atualizar produto:', error);
+    } catch (error: any) {
+      console.error('ERRO POSTGRES (updateProduct):', error.message, error);
       throw error;
     }
   },
 
   async deleteProduct(id: string) {
-    try {
-      return await sql('DELETE FROM products WHERE id=$1', [id]);
-    } catch (error) {
-      console.error('Erro ao deletar produto:', error);
-      throw error;
-    }
+    return await sql('DELETE FROM products WHERE id=$1', [id]);
   },
 
   // Configurações

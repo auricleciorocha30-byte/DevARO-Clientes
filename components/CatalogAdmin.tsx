@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, Check, ShoppingBag, Link as LinkIcon, Copy, X, ExternalLink, Loader2 } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod, GlobalPaymentLinks } from '../types';
@@ -87,8 +88,9 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
         await onAddProduct(newProduct);
       }
       resetForm();
-    } catch (error) {
-      alert('Erro ao salvar o produto no banco de dados. Tente novamente.');
+    } catch (error: any) {
+      console.error('Falha ao salvar:', error);
+      alert(`Erro no Banco de Dados: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsSaving(false);
     }
