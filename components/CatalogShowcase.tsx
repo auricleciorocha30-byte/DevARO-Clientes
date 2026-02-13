@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingBag, MessageSquare, MapPin, CheckCircle2, ShoppingCart, ExternalLink, X } from 'lucide-react';
+import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, X } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -22,25 +22,25 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
     }
   };
 
-  // Detecta se é o acesso público direto via URL
+  // Verifica se é a visão administrativa ou pública
   const params = new URLSearchParams(window.location.search);
   const isPublicUrl = params.get('view') === 'showcase' && !window.opener && window.history.length <= 1;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20 relative animate-in fade-in duration-500">
-      {/* Botão de Fechar (X): Substituindo o "Voltar" */}
+      {/* Botão de Fechar (X): Unica forma de sair do encarte se não for URL pública */}
       {!isPublicUrl && (
         <button 
           onClick={onBack}
           title="Fechar Encarte"
-          className="fixed top-6 right-6 z-[70] p-4 bg-white/90 backdrop-blur-md shadow-2xl rounded-full text-slate-900 hover:bg-white active:scale-90 transition-all border border-slate-200 flex items-center justify-center"
+          className="fixed top-4 right-4 z-[100] p-4 bg-white/90 backdrop-blur-md shadow-2xl rounded-full text-slate-900 hover:bg-white active:scale-90 transition-all border border-slate-200 flex items-center justify-center lg:top-8 lg:right-8"
         >
-          <X size={24} strokeWidth={3} />
+          <X size={28} strokeWidth={3} />
         </button>
       )}
 
       {/* Header do Encarte */}
-      <header className="w-full bg-blue-600 text-white p-6 md:p-12 text-center relative rounded-b-[48px] shadow-2xl shadow-blue-500/20 max-w-4xl">
+      <header className="w-full bg-blue-600 text-white p-8 md:p-14 text-center relative rounded-b-[48px] shadow-2xl shadow-blue-500/20 max-w-4xl">
         <div className="flex flex-col items-center gap-5">
           <div className="w-24 h-24 bg-white rounded-[32px] flex items-center justify-center text-blue-600 shadow-2xl transform hover:rotate-6 transition-transform">
              <ShoppingBag size={48} />
@@ -61,7 +61,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
              rel="noopener noreferrer"
              className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full shadow-xl active:scale-95 transition-all hover:bg-green-600 border border-green-400"
            >
-             <MessageSquare size={16} /> Falar no WhatsApp
+             <MessageSquare size={16} /> WhatsApp de Vendas
            </a>
         </div>
       </header>
@@ -69,9 +69,9 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
       {/* Lista de Produtos */}
       <main className="w-full max-w-2xl px-4 mt-12 space-y-8">
         <div className="flex items-center justify-between px-4">
-          <h2 className="text-2xl font-black text-slate-900">Catálogo de Apps</h2>
+          <h2 className="text-2xl font-black text-slate-900">Catálogo Disponível</h2>
           <div className="flex items-center gap-2 bg-slate-200/50 px-3 py-1 rounded-lg">
-            <span className="text-[10px] font-black text-slate-500 uppercase">{products.length} {products.length === 1 ? 'Produto' : 'Produtos'}</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase">{products.length} {products.length === 1 ? 'App' : 'Apps'}</span>
           </div>
         </div>
 
@@ -102,15 +102,15 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
                 
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pague com</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Forma de Pagamento</span>
                     <div className="flex gap-1.5 mt-1">
-                      {product.paymentMethods.length > 0 ? product.paymentMethods.map(m => (
+                      {product.paymentMethods && product.paymentMethods.length > 0 ? product.paymentMethods.map(m => (
                         <span key={m} className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
                           {m}
                         </span>
                       )) : (
                         <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-400 px-3 py-1 rounded-full border border-slate-200">
-                          PIX / Cartão
+                          PIX Liberado
                         </span>
                       )}
                     </div>
@@ -121,7 +121,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
                     className="flex items-center gap-3 px-8 py-4 bg-blue-600 text-white font-black rounded-[20px] shadow-2xl shadow-blue-500/40 active:scale-95 transition-all hover:bg-blue-700 hover:shadow-blue-500/60"
                   >
                     {product.externalLink ? <ExternalLink size={20} /> : <ShoppingCart size={20} />}
-                    <span className="tracking-tight">{product.externalLink ? 'SAIBA MAIS' : 'SOLICITAR AGORA'}</span>
+                    <span className="tracking-tight uppercase">{product.externalLink ? 'Conhecer App' : 'Contratar'}</span>
                   </button>
                 </div>
               </div>
@@ -130,17 +130,17 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
         </div>
 
         {products.length === 0 && (
-          <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-200">
+          <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-200 animate-pulse">
             <ShoppingCart className="mx-auto text-slate-100 mb-6" size={80} />
-            <p className="text-slate-400 font-black text-xl">Catálogo em atualização...</p>
-            <p className="text-slate-300 text-sm mt-2">Volte em instantes para ver nossas ofertas.</p>
+            <p className="text-slate-400 font-black text-xl">Carregando ofertas...</p>
+            <p className="text-slate-300 text-sm mt-2">Sincronizando com o servidor Neon.</p>
           </div>
         )}
 
         <div className="py-12 text-center space-y-3">
            <div className="w-12 h-1 bg-slate-200 mx-auto rounded-full mb-6"></div>
-           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">DevARO Cloud Solutions</p>
-           <p className="text-[10px] text-slate-300 font-bold">Desenvolvido com Neon PostgreSQL</p>
+           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">DevARO Cloud Infrastructure</p>
+           <p className="text-[10px] text-slate-300 font-bold">PostgreSQL via Neon Serverless</p>
         </div>
       </main>
     </div>
