@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Menu, Check, Save, Database, Loader2 } from 'lucide-react';
+import { Menu, Check, Save, Database } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -50,7 +50,10 @@ const App: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      console.log('App: Sincronizando dados. View:', view);
       await initDatabase(); 
+      
+      // Se não estiver logado E não for o showcase, para aqui e mostra login
       if (!user && view !== 'showcase') {
         setIsLoading(false);
         return;
@@ -62,6 +65,8 @@ const App: React.FC = () => {
         NeonService.getSettings('payment_links'),
         NeonService.getSettings('catalog_config')
       ]);
+
+      console.log('App: Produtos carregados do Neon:', dbProducts.length);
 
       setClients((dbClients as any[]).map(c => ({
         ...c,
@@ -83,7 +88,7 @@ const App: React.FC = () => {
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
     } catch (err) {
-      console.error('Erro ao carregar dados:', err);
+      console.error('App: Erro ao carregar dados:', err);
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +112,7 @@ const App: React.FC = () => {
 
   const refreshProducts = async () => {
     const dbProducts = await NeonService.getProducts();
+    console.log('App: Refreshing produtos:', dbProducts.length);
     setProducts((dbProducts as any[]).map(p => ({
       ...p,
       price: Number(p.price),
@@ -128,7 +134,7 @@ const App: React.FC = () => {
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e) {
-      alert('Erro ao salvar cliente. Verifique o console.');
+      alert('Erro ao salvar cliente no banco.');
     }
   };
 
@@ -165,9 +171,10 @@ const App: React.FC = () => {
   };
 
   if (isLoading && view !== 'showcase') return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
-      <Database className="animate-pulse text-indigo-500 mb-4" size={56} />
-      <p className="font-bold text-lg">Sincronizando Banco de Dados Neon...</p>
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-6 text-center">
+      <Database className="animate-pulse text-indigo-500 mb-6" size={64} />
+      <h2 className="text-2xl font-black mb-2 tracking-tight">SINCRONIZANDO NEON</h2>
+      <p className="text-slate-400 font-medium text-sm uppercase tracking-widest">Aguarde a conexão segura...</p>
     </div>
   );
 
@@ -217,27 +224,27 @@ const App: React.FC = () => {
       case 'settings': return (
         <div className="max-w-3xl space-y-6 pb-20">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento</h2>
+            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento Globais</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
                 <div key={key} className="space-y-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase">Gateway Canal {idx + 1}</label>
+                  <label className="block text-xs font-black text-slate-400 uppercase">Canal de Gateway {idx + 1}</label>
                   <input 
                     type="text" 
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
-                    placeholder={`https://pay.devaro.com/link-${idx + 1}`}
+                    placeholder={`https://pay.devaro.com/checkout-${idx + 1}`}
                   />
                 </div>
               ))}
             </div>
             <button 
               onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); setIsLinkSaved(true); setTimeout(() => setIsLinkSaved(false), 2000); }}
-              className={`mt-8 px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${isLinkSaved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+              className={`mt-8 px-8 py-4 rounded-xl font-black transition-all flex items-center gap-2 shadow-lg ${isLinkSaved ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/20'}`}
             >
-              {isLinkSaved ? <Check size={20} /> : <Save size={20} />}
-              {isLinkSaved ? 'Sincronizado' : 'Salvar no Banco'}
+              {isLinkSaved ? <Check size={24} /> : <Save size={24} />}
+              {isLinkSaved ? 'CONFIGURAÇÕES SALVAS' : 'ATUALIZAR GATEWAYS'}
             </button>
           </div>
         </div>
@@ -257,12 +264,12 @@ const App: React.FC = () => {
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl"><Menu size={24} /></button>
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight">DevARO Panel</h1>
+                <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO <span className="text-indigo-600">Panel</span></h1>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
-                  <Database size={12} className="text-indigo-600" />
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL Connect</span>
+                <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
+                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Neon Connected</span>
                 </div>
               </div>
             </div>
