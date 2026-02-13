@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Loader2, CheckCircle2, DollarSign } from 'lucide-react';
 import { Client, ClientStatus } from '../types';
 
 interface ClientModalProps {
@@ -47,9 +47,9 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
     setIsSaving(true);
     try {
       await onSave(formData);
+      // O fechamento ocorre no App.tsx após sucesso
     } catch (e) {
-      console.error(e);
-    } finally {
+      console.error('Erro no Modal ao salvar:', e);
       setIsSaving(false);
     }
   };
@@ -64,9 +64,10 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
             <h3 className="text-xl font-black text-slate-900 tracking-tight">
               {initialData && (initialData as any).id ? 'Editar Cadastro' : 'Novo Cliente'}
             </h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Sincronização Neon SQL</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">DevARO Neon Infrastructure</p>
           </div>
           <button 
+            type="button"
             onClick={onClose} 
             className="p-2.5 hover:bg-slate-100 rounded-2xl transition-all active:scale-90"
           >
@@ -82,7 +83,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                 required
                 type="text"
                 placeholder="Ex: Pedro Henrique"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base font-medium"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base font-medium text-slate-900"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
@@ -95,7 +96,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                   required
                   type="email"
                   placeholder="cliente@email.com"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base text-slate-900"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                 />
@@ -106,7 +107,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                   required
                   type="tel"
                   placeholder="DDD + Número"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base text-slate-900"
                   value={formData.whatsapp}
                   onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
                 />
@@ -114,35 +115,35 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
             </div>
 
             <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-[24px]">
-              <div className="flex justify-between items-center mb-4">
-                 <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Resumo da Solução</label>
-                 <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">DevARO APP</span>
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="flex-1">
-                   <p className="text-lg font-black text-slate-800 leading-tight">{formData.appName || 'Selecione no catálogo...'}</p>
-                   <p className="text-xs text-slate-500 font-medium">Assinatura Mensal Recorrente</p>
+              <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-4">Informações do Aplicativo</label>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome do App</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ex: Gestor Plus"
+                    className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    value={formData.appName}
+                    onChange={(e) => setFormData({...formData, appName: e.target.value})}
+                  />
                 </div>
-                <div className="text-right">
-                  <span className="text-2xl font-black text-blue-600">R$ {formData.monthlyValue.toFixed(2)}</span>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Valor Mensal (R$)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" size={16} />
+                    <input
+                      required
+                      type="number"
+                      step="0.01"
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-blue-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 font-bold"
+                      value={formData.monthlyValue}
+                      onChange={(e) => setFormData({...formData, monthlyValue: parseFloat(e.target.value)})}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Nome do App só aparece se não vier do catálogo */}
-            {!initialData?.appName && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Aplicativo</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Nome do app para o CRM"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base"
-                  value={formData.appName}
-                  onChange={(e) => setFormData({...formData, appName: e.target.value})}
-                />
-              </div>
-            )}
             
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade / Região</label>
@@ -150,7 +151,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                 required
                 type="text"
                 placeholder="Ex: São Paulo - SP"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base text-slate-900"
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
               />
@@ -158,13 +159,13 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
 
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia do Vencimento</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia Vencimento</label>
                   <input
                     required
                     type="number"
                     min="1"
                     max="31"
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base font-bold"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold"
                     value={formData.dueDay}
                     onChange={(e) => setFormData({...formData, dueDay: parseInt(e.target.value)})}
                   />
@@ -174,7 +175,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                   <input
                     type="text"
                     placeholder="Opcional"
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base truncate"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 truncate text-slate-900"
                     value={formData.paymentLink}
                     onChange={(e) => setFormData({...formData, paymentLink: e.target.value})}
                   />
@@ -196,7 +197,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
               ) : (
                 <>
                   <CheckCircle2 size={24} />
-                  CONFIRMAR REGISTRO
+                  SALVAR REGISTRO
                 </>
               )}
             </button>
