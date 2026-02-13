@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag, LogOut } from 'lucide-react';
 import { View } from '../types';
 
 interface SidebarProps {
@@ -7,9 +7,10 @@ interface SidebarProps {
   setView: (view: View) => void;
   isOpen: boolean;
   onClose: () => void;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose, onLogout }) => {
   const menuItems = [
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clients' as View, label: 'Clientes', icon: Users },
@@ -19,9 +20,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
 
   const handleNavClick = (view: View) => {
     setView(view);
-    // Garante o fechamento do menu em dispositivos móveis
     if (window.innerWidth < 1024) {
       onClose();
+    }
+  };
+
+  const handleLogoutClick = () => {
+    if (confirm('Deseja realmente sair do sistema DevARO?')) {
+      onLogout();
     }
   };
 
@@ -29,7 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
 
   return (
     <>
-      {/* Overlay para mobile com z-index alto */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] lg:hidden animate-in fade-in duration-300"
@@ -47,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
             <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
               <Code2 size={24} />
             </div>
-            <span className="font-bold text-2xl tracking-tight">DevARO</span>
+            <span className="font-bold text-2xl tracking-tight text-white">DevARO</span>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 hover:bg-slate-800 rounded-xl text-slate-400 active:scale-90 transition-all">
             <X size={24} />
@@ -75,10 +80,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
           })}
         </nav>
 
-        <div className="p-8 border-t border-slate-800 bg-slate-900/50">
-          <div className="flex flex-col gap-1.5">
-            <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em]">Painel Administrativo</p>
-            <p className="text-slate-400 text-xs font-medium">v1.2.5 • DevARO CRM</p>
+        <div className="p-5 border-t border-slate-800 bg-slate-900/50 space-y-4">
+          <button 
+            onClick={handleLogoutClick}
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold active:scale-95"
+          >
+            <LogOut size={22} />
+            Sair do Painel
+          </button>
+
+          <div className="px-5">
+            <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em]">Painel Neon SQL</p>
+            <p className="text-slate-400 text-xs font-medium">v1.4.0 • Local Session</p>
           </div>
         </div>
       </aside>

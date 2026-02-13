@@ -1,78 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Menu, Check, Save } from 'lucide-react';
+import { Bell, Menu, Check, Save, Database, Loader2 } from 'lucide-react';
+import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/ClientList';
 import ClientModal from './components/ClientModal';
 import CatalogAdmin from './components/CatalogAdmin';
 import CatalogShowcase from './components/CatalogShowcase';
+import Login from './components/Login';
 import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks } from './types';
-import { INITIAL_CLIENTS } from './constants';
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<any>(null);
   const [view, setView] = useState<View>(() => {
     const params = new URLSearchParams(window.location.search);
     return (params.get('view') as View) || 'dashboard';
   });
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLinkSaved, setIsLinkSaved] = useState(false);
   
-  const [clients, setClients] = useState<Client[]>(() => {
-    try {
-      const saved = localStorage.getItem('devaro_clients');
-      return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
-    } catch (e) {
-      return INITIAL_CLIENTS;
-    }
+  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({
+    link1: '', link2: '', link3: '', link4: ''
   });
-
-  const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>(() => {
-    try {
-      const saved = localStorage.getItem('devaro_payment_links');
-      return saved ? JSON.parse(saved) : {
-        link1: 'https://pay.devaro.com/link1',
-        link2: '',
-        link3: '',
-        link4: ''
-      };
-    } catch (e) {
-      return { link1: '', link2: '', link3: '', link4: '' };
-    }
-  });
-
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem('devaro_products');
-      if (!saved) return [];
-      const parsed = JSON.parse(saved) as Product[];
-      // Migração: garante que paymentLinkId exista em todos os itens
-      return parsed.map(p => ({
-        ...p,
-        paymentLinkId: p.paymentLinkId || 'link1'
-      }));
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>(() => {
-    try {
-      const saved = localStorage.getItem('devaro_catalog_config');
-      return saved ? JSON.parse(saved) : { 
-        address: 'Rua DevARO, 123 - Centro', 
-        whatsapp: '5511999999999',
-        companyName: 'DevARO Apps' 
-      };
-    } catch (e) {
-      return { address: '', whatsapp: '', companyName: 'DevARO Apps' };
-    }
+  const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>({
+    address: '', whatsapp: '', companyName: 'DevARO Apps'
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
 
+  // Auth local (Neon DB Session)
+  useEffect(() => {
+    const storedUser = localStorage.getItem('devaro_session');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // Sync View with URL
   useEffect(() => {
     const url = new URL(window.location.href);
     if (view === 'dashboard') {
@@ -83,43 +53,118 @@ const App: React.FC = () => {
     window.history.pushState({}, '', url.toString());
   }, [view]);
 
-  useEffect(() => localStorage.setItem('devaro_clients', JSON.stringify(clients)), [clients]);
-  useEffect(() => localStorage.setItem('devaro_products', JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem('devaro_catalog_config', JSON.stringify(catalogConfig)), [catalogConfig]);
-  useEffect(() => localStorage.setItem('devaro_payment_links', JSON.stringify(paymentLinks)), [paymentLinks]);
+  // Carregamento Inicial Neon DB
+  useEffect(() => {
+    const loadData = async () => {
+      // O showcase é a única tela pública
+      if (!user && view !== 'showcase') {
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        await initDatabase(); // Garante tabelas e usuário padrão
+        
+        const [dbClients, dbProducts, dbLinks, dbCatalog] = await Promise.all([
+          NeonService.getClients(),
+          NeonService.getProducts(),
+          NeonService.getSettings('payment_links'),
+          NeonService.getSettings('catalog_config')
+        ]);
 
-  const handleSavePaymentLinks = () => {
-    localStorage.setItem('devaro_payment_links', JSON.stringify(paymentLinks));
+        const mappedClients = (dbClients as any[]).map(c => ({
+          ...c,
+          appName: c.app_name,
+          monthlyValue: Number(c.monthly_value),
+          dueDay: c.due_day,
+          paymentLink: c.payment_link,
+          createdAt: c.created_at
+        }));
+
+        const mappedProducts = (dbProducts as any[]).map(p => ({
+          ...p,
+          price: Number(p.price),
+          paymentMethods: p.payment_methods,
+          paymentLinkId: p.payment_link_id,
+          externalLink: p.external_link
+        }));
+
+        setClients(mappedClients);
+        setProducts(mappedProducts);
+        if (dbLinks) setPaymentLinks(dbLinks);
+        if (dbCatalog) setCatalogConfig(dbCatalog);
+      } catch (err) {
+        console.error('Neon Load Error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user, view]);
+
+  const refreshClients = async () => {
+    const dbClients = await NeonService.getClients();
+    setClients((dbClients as any[]).map(c => ({
+      ...c,
+      appName: c.app_name,
+      monthlyValue: Number(c.monthly_value),
+      dueDay: c.due_day,
+      paymentLink: c.payment_link,
+      createdAt: c.created_at
+    })));
+  };
+
+  const refreshProducts = async () => {
+    const dbProducts = await NeonService.getProducts();
+    setProducts((dbProducts as any[]).map(p => ({
+      ...p,
+      price: Number(p.price),
+      paymentMethods: p.payment_methods,
+      paymentLinkId: p.payment_link_id,
+      externalLink: p.external_link
+    })));
+  };
+
+  const handleSavePaymentLinks = async () => {
+    await NeonService.setSettings('payment_links', paymentLinks);
     setIsLinkSaved(true);
     setTimeout(() => setIsLinkSaved(false), 2000);
   };
 
-  const handleAddOrEditClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
+  const handleAddOrEditClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
     if (editingClient) {
-      setClients(prev => prev.map(c => c.id === editingClient.id ? { ...c, ...clientData } : c));
+      await NeonService.updateClient(editingClient.id, clientData);
     } else {
-      const newClient: Client = {
-        ...clientData,
-        id: Math.random().toString(36).substr(2, 9),
-        createdAt: new Date().toISOString(),
-      };
-      setClients([...clients, newClient]);
+      await NeonService.addClient(clientData);
     }
+    await refreshClients();
     setIsModalOpen(false);
     setEditingClient(null);
     setInitialClientData(null);
   };
 
-  const handleDeleteClient = (id: string) => {
-    if (confirm('Deseja realmente remover este cliente?')) setClients(clients.filter(c => c.id !== id));
+  const handleDeleteClient = async (id: string) => {
+    if (confirm('Deseja realmente remover este cliente?')) {
+      await NeonService.deleteClient(id);
+      await refreshClients();
+    }
   };
 
-  const handleAddProduct = (prodData: Omit<Product, 'id'>) => {
-    setProducts([...products, { ...prodData, id: Math.random().toString(36).substr(2, 9) }]);
+  const handleUpdateStatus = async (id: string, status: ClientStatus) => {
+    await NeonService.updateClientStatus(id, status);
+    await refreshClients();
   };
 
-  const handleUpdateProduct = (id: string, prodData: Omit<Product, 'id'>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...prodData } : p));
+  const handleAddProduct = async (prodData: Omit<Product, 'id'>) => {
+    await NeonService.addProduct(prodData);
+    await refreshProducts();
+  };
+
+  const handleUpdateProduct = async (id: string, prodData: Omit<Product, 'id'>) => {
+    await NeonService.updateProduct(id, prodData);
+    await refreshProducts();
   };
 
   const handleSelectProductFromShowcase = (product: Product) => {
@@ -133,6 +178,30 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleSaveCatalogConfig = async (config: CatalogConfig) => {
+    await NeonService.setSettings('catalog_config', config);
+    setCatalogConfig(config);
+  };
+
+  const handleLoginSuccess = (userData: any) => {
+    localStorage.setItem('devaro_session', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('devaro_session');
+    setUser(null);
+  };
+
+  if (!user && view !== 'showcase') return <Login onLoginSuccess={handleLoginSuccess} />;
+
+  if (isLoading && view !== 'showcase') return (
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+      <Database className="animate-pulse text-indigo-500 mb-4" size={56} />
+      <p className="font-bold text-lg">Conectando ao Neon SQL...</p>
+    </div>
+  );
+
   const renderContent = () => {
     switch (view) {
       case 'dashboard': return <Dashboard clients={clients} />;
@@ -142,7 +211,7 @@ const App: React.FC = () => {
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
           onDelete={handleDeleteClient}
-          onUpdateStatus={(id, status) => setClients(prev => prev.map(c => c.id === id ? { ...c, status } : c))}
+          onUpdateStatus={handleUpdateStatus}
           paymentLink={paymentLinks.link1}
         />
       );
@@ -151,10 +220,10 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
-          onSaveConfig={setCatalogConfig}
+          onSaveConfig={handleSaveCatalogConfig}
           onAddProduct={handleAddProduct}
           onUpdateProduct={handleUpdateProduct}
-          onDeleteProduct={(id) => confirm('Remover?') && setProducts(products.filter(p => p.id !== id))}
+          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); refreshProducts(); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -169,32 +238,29 @@ const App: React.FC = () => {
       case 'settings': return (
         <div className="max-w-3xl space-y-6 pb-20">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6 text-slate-900">Configurações de Pagamento DevARO</h2>
-            <p className="text-sm text-slate-500 mb-6">Configure até 4 links globais para associar aos seus produtos.</p>
-            
+            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento (Neon Store)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
                 <div key={key} className="space-y-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase">Link de Pagamento {idx + 1}</label>
+                  <label className="block text-xs font-black text-slate-400 uppercase">Gateway Canal {idx + 1}</label>
                   <input 
                     type="text" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
-                    placeholder={`https://checkout.com/plano-${idx + 1}`}
+                    placeholder={`https://pay.devaro.com/canal-${idx + 1}`}
                   />
                 </div>
               ))}
             </div>
-
             <button 
               onClick={handleSavePaymentLinks}
               className={`mt-8 w-full md:w-auto px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                isLinkSaved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                isLinkSaved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}
             >
               {isLinkSaved ? <Check size={20} /> : <Save size={20} />}
-              {isLinkSaved ? 'Configurações Salvas' : 'Salvar Todos os Links'}
+              {isLinkSaved ? 'Sincronizado no Neon DB' : 'Persistir no Banco de Dados'}
             </button>
           </div>
         </div>
@@ -212,19 +278,25 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
       {view !== 'showcase' && (
-        <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
       )}
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${view === 'showcase' ? '' : 'lg:ml-64'}`}>
         {view !== 'showcase' && (
           <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 p-4 lg:p-6">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-3">
-                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl active:scale-95"><Menu size={24} /></button>
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight">{view === 'dashboard' ? 'Início' : view === 'clients' ? 'Clientes' : view === 'catalog' ? 'Encarte' : 'Ajustes'}</h1>
+                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl"><Menu size={24} /></button>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">DevARO Panel</h1>
               </div>
-              <div className="relative p-2.5 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => setView('dashboard')}>
-                <Bell size={20} className="text-slate-600" />
-                {testingAlertsCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold animate-pulse">{testingAlertsCount}</span>}
+              <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
+                  <Database size={12} className="text-indigo-600" />
+                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL Auth</span>
+                </div>
+                <div className="relative p-2.5 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => setView('dashboard')}>
+                  <Bell size={20} className="text-slate-600" />
+                  {testingAlertsCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold">{testingAlertsCount}</span>}
+                </div>
               </div>
             </div>
           </header>
