@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Client } from "../types";
 
@@ -19,9 +20,8 @@ export const generatePersonalizedMessage = async (
   `;
 
   try {
-    // Create instance inside the function to avoid top-level crashes if process.env.API_KEY is not yet ready.
-    // Always use the required initialization format with a named parameter.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Corrected initialization: directly use process.env.API_KEY as per guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Using ai.models.generateContent directly with model name and contents prompt.
     const response = await ai.models.generateContent({

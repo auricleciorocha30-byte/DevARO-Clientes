@@ -3,9 +3,6 @@ import { neon } from '@neondatabase/serverless';
 
 const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4cpa7j-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require');
 
-/**
- * Normaliza e limpa os dados para evitar erros de tipo no PostgreSQL
- */
 const normalizeData = (data: any) => {
   return {
     name: String(data.name || 'Sem Nome').trim(),
@@ -22,11 +19,8 @@ const normalizeData = (data: any) => {
 
 export const initDatabase = async () => {
   try {
-    console.log('DevARO: Verificando integridade das tabelas...');
-    
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Tabela de Clientes com estrutura robusta
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,7 +37,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Migrações de segurança para garantir que colunas existam em bancos já criados
+    // Migrações rápidas
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS app_name TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthly_value NUMERIC(10,2) DEFAULT 0;`,
@@ -51,27 +45,26 @@ export const initDatabase = async () => {
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`
     ];
+    for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
 
-    for (const cmd of migrations) {
-      try { await sql(cmd); } catch (e) { /* ignore */ }
-    }
-
-    // Tabelas auxiliares
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
+    console.log('Neon: Database Ready');
   } catch (error) {
-    console.error('Falha na inicialização do Neon:', error);
+    console.error('Neon: Initialization Error', error);
   }
 };
 
 export const NeonService = {
   async getClients() {
     try {
-      return await sql('SELECT * FROM clients ORDER BY created_at DESC');
+      const rows = await sql('SELECT * FROM clients ORDER BY created_at DESC');
+      console.log('Neon: Clientes carregados:', rows.length);
+      return rows;
     } catch (e) {
-      console.error('Erro ao buscar clientes:', e);
+      console.error('Neon: Erro ao buscar:', e);
       return [];
     }
   },
@@ -79,32 +72,28 @@ export const NeonService = {
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     try {
-      console.log('Gravando cliente no Neon:', c);
       const res = await sql(`
         INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
+      console.log('Neon: Cliente gravado com sucesso:', res[0].id);
       return res[0];
     } catch (error: any) {
-      console.error('ERRO SQL (addClient):', error.message);
-      throw new Error(`Falha ao salvar no Neon: ${error.message}`);
+      console.error('Neon: Erro no INSERT:', error);
+      throw error;
     }
   },
 
   async updateClient(id: string, rawData: any) {
     const c = normalizeData(rawData);
-    try {
-      return await sql(`
-        UPDATE clients 
-        SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
-        WHERE id=$10
-        RETURNING *
-      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
-    } catch (error: any) {
-      console.error('ERRO SQL (updateClient):', error.message);
-      throw error;
-    }
+    const res = await sql(`
+      UPDATE clients 
+      SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
+      WHERE id=$10
+      RETURNING *
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+    return res[0];
   },
 
   async deleteClient(id: string) {
@@ -115,27 +104,26 @@ export const NeonService = {
     return await sql('UPDATE clients SET status=$1 WHERE id=$2', [status, id]);
   },
 
-  async getProducts() {
-    return await sql('SELECT * FROM products ORDER BY name ASC');
-  },
-
+  async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },
+  
+  // Adding missing CRUD methods for products
   async addProduct(p: any) {
-    const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
-    return await sql(`
+    const res = await sql(`
       INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
-    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '']);
+    `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
+    return res[0];
   },
 
   async updateProduct(id: string, p: any) {
-    const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
-    return await sql(`
+    const res = await sql(`
       UPDATE products 
-      SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5::jsonb, payment_link_id=$6, external_link=$7
+      SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5, payment_link_id=$6, external_link=$7
       WHERE id=$8
       RETURNING *
-    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '', id]);
+    `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
+    return res[0];
   },
 
   async deleteProduct(id: string) {

@@ -39,7 +39,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('devaro_session');
-    if (storedUser) setUser(JSON.parse(storedUser));
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
   }, []);
 
   useEffect(() => {
@@ -78,11 +80,7 @@ const App: React.FC = () => {
       if (dbCatalog) setCatalogConfig(dbCatalog);
 
       if (user) {
-        const dbClients = await NeonService.getClients();
-        setClients((dbClients as any[]).map(c => ({
-          ...c, appName: c.app_name, monthlyValue: Number(c.monthly_value),
-          dueDay: c.due_day, paymentLink: c.payment_link, createdAt: c.created_at
-        })));
+        await refreshClients();
       }
     } catch (err) {
       console.error('Falha Neon:', err);
@@ -95,27 +93,37 @@ const App: React.FC = () => {
 
   const refreshClients = async () => {
     const dbClients = await NeonService.getClients();
-    setClients((dbClients as any[]).map(c => ({
-      ...c, appName: c.app_name, monthlyValue: Number(c.monthly_value),
-      dueDay: c.due_day, paymentLink: c.payment_link, createdAt: c.created_at
-    })));
+    const mapped = (dbClients as any[]).map(c => ({
+      ...c,
+      appName: c.app_name || 'Sem App',
+      monthlyValue: Number(c.monthly_value || 0),
+      dueDay: Number(c.due_day || 10),
+      paymentLink: c.payment_link || '',
+      createdAt: c.created_at || new Date().toISOString()
+    }));
+    setClients(mapped);
+  };
+
+  const handleLoginSuccess = (userData: any) => {
+    setUser(userData);
+    localStorage.setItem('devaro_session', JSON.stringify(userData));
   };
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Dados do cliente atualizados!');
+        showToast('Dados atualizados!');
       } else {
         await NeonService.addClient(clientData);
-        showToast('Novo cliente cadastrado com sucesso!');
+        showToast('Cliente gravado no SQL!');
       }
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      showToast(e.message || 'Erro ao gravar no banco.', 'error');
+      showToast(e.message || 'Erro ao gravar.', 'error');
     }
   };
 
@@ -123,6 +131,32 @@ const App: React.FC = () => {
     localStorage.removeItem('devaro_session');
     setUser(null);
   };
+
+  // Se for vitrine pública, não exige login
+  if (view === 'showcase') {
+    return (
+      <CatalogShowcase 
+        products={products}
+        config={catalogConfig}
+        onBack={() => setView('catalog')}
+        onSelectProduct={(p) => {
+          setInitialClientData({
+            appName: p.name,
+            monthlyValue: Number(p.price),
+            paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
+            status: ClientStatus.TESTING,
+            dueDay: 10
+          });
+          setIsModalOpen(true);
+        }}
+      />
+    );
+  }
+
+  // Se não estiver logado, mostra tela de login (Exceto showcase)
+  if (!user && !isLoading) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
 
   const renderContent = () => {
     switch (view) {
@@ -132,8 +166,8 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); showToast('Cliente removido.'); }}}
-          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); showToast('Status alterado.'); }}
+          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); showToast('Removido.'); }}}
+          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); showToast('Status atualizado.'); }}
           paymentLink={paymentLinks.link1}
         />
       );
@@ -149,23 +183,6 @@ const App: React.FC = () => {
           onPreview={() => setView('showcase')}
         />
       );
-      case 'showcase': return (
-        <CatalogShowcase 
-          products={products}
-          config={catalogConfig}
-          onBack={() => setView('catalog')}
-          onSelectProduct={(p) => {
-            setInitialClientData({
-              appName: p.name,
-              monthlyValue: Number(p.price),
-              paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
-              status: ClientStatus.TESTING,
-              dueDay: 10
-            });
-            setIsModalOpen(true);
-          }}
-        />
-      );
       case 'settings': return (
         <div className="max-w-3xl space-y-6 pb-20">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -177,7 +194,7 @@ const App: React.FC = () => {
                   <input 
                     type="text" 
                     placeholder="Cole o link aqui..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
                   />
@@ -185,8 +202,8 @@ const App: React.FC = () => {
               ))}
             </div>
             <button 
-              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais de pagamento salvos!'); }}
-              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-3"
+              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais salvos!'); }}
+              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all flex items-center gap-3"
             >
               <Save size={20} /> SALVAR CONFIGURAÇÕES
             </button>
@@ -198,8 +215,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
-      {/* Toast Notification */}
+    <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden`}>
       {notification && (
         <div className={`fixed top-6 right-6 z-[200] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 duration-300 border ${notification.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
            {notification.type === 'success' ? <Check size={24} /> : <Bell size={24} />}
@@ -207,27 +223,30 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {view !== 'showcase' && (
-        <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
-      )}
-      <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${view === 'showcase' ? '' : 'lg:ml-64'}`}>
-        {view !== 'showcase' && (
-          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 p-4 lg:p-6">
-            <div className="flex items-center justify-between max-w-7xl mx-auto">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl"><Menu size={24} /></button>
-                <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO Panel</h1>
-              </div>
-              <div className="hidden sm:flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Neon Engine Active</span>
-                </div>
+      <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
+      
+      <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 lg:ml-64`}>
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 p-4 lg:p-6">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl"><Menu size={24} /></button>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO Panel</h1>
+            </div>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Neon Engine Active</span>
               </div>
             </div>
-          </header>
-        )}
-        <div className={`${view === 'showcase' ? '' : 'p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1'}`}>{renderContent()}</div>
+          </div>
+        </header>
+
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64 text-slate-400 font-bold uppercase text-xs tracking-widest">Sincronizando...</div>
+          ) : renderContent()}
+        </div>
+
         {isModalOpen && (
           <ClientModal 
             onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 
