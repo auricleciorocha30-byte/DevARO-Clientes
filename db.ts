@@ -74,6 +74,22 @@ export const NeonService = {
     return users.length > 0 ? users[0] : null;
   },
 
+  async register(name: string, email: string, password: string) {
+    try {
+      const result = await sql(`
+        INSERT INTO users (name, email, password)
+        VALUES ($1, $2, $3)
+        RETURNING id, email, name
+      `, [name, email, password]);
+      return result.length > 0 ? result[0] : null;
+    } catch (error: any) {
+      if (error.message && error.message.includes('unique constraint')) {
+        throw new Error('Este e-mail já está cadastrado.');
+      }
+      throw error;
+    }
+  },
+
   // Clientes
   async getClients() {
     return await sql('SELECT * FROM clients ORDER BY created_at DESC');
@@ -117,7 +133,7 @@ export const NeonService = {
     `, [p.name, p.description, p.price, p.photo, p.paymentMethods, p.paymentLinkId, p.externalLink, id]);
   },
   async deleteProduct(id: string) {
-    return await sql('DELETE FROM products WHERE id=$1', [id]);
+    return await sql('DELETE FROM clients WHERE id=$1', [id]);
   },
 
   // Configurações Genéricas

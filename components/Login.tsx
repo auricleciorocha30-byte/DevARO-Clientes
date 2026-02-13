@@ -1,57 +1,97 @@
 import React, { useState } from 'react';
 import { NeonService } from '../db';
-import { Mail, Lock, LogIn, AlertCircle, Loader2, Eye, EyeOff, Code2 } from 'lucide-react';
+import { Mail, Lock, LogIn, AlertCircle, Loader2, Eye, EyeOff, Code2, UserPlus, User } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (userData: any) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     
     try {
-      const user = await NeonService.login(email, password);
-      if (user) {
-        onLoginSuccess(user);
+      if (isRegistering) {
+        // Fluxo de Cadastro
+        const newUser = await NeonService.register(name, email, password);
+        if (newUser) {
+          // Após cadastrar, faz login automático
+          onLoginSuccess(newUser);
+        }
       } else {
-        setError('E-mail ou senha inválidos no Neon DB.');
+        // Fluxo de Login
+        const user = await NeonService.login(email, password);
+        if (user) {
+          onLoginSuccess(user);
+        } else {
+          setError('E-mail ou senha inválidos no Neon DB.');
+        }
       }
     } catch (err: any) {
       console.error(err);
-      setError('Erro de conexão com o banco de dados Neon.');
+      setError(err.message || 'Erro de conexão com o banco de dados Neon.');
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleMode = () => {
+    setIsRegistering(!isRegistering);
+    setError('');
+    setName('');
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Orbs */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]"></div>
 
       <div className="w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in duration-500">
-        <div className="p-8 pt-12 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+        <div className="p-8 pt-12 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white transition-all">
           <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-white/30 transform hover:rotate-6 transition-transform">
             <Code2 size={40} className="text-white" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight">DevARO CRM</h1>
-          <p className="text-blue-100 mt-2 font-medium opacity-80">Painel de Controle Neon SQL</p>
+          <h1 className="text-3xl font-black tracking-tight">
+            {isRegistering ? 'Criar Conta' : 'DevARO CRM'}
+          </h1>
+          <p className="text-blue-100 mt-2 font-medium opacity-80 uppercase text-[10px] tracking-widest">
+            {isRegistering ? 'Cadastre-se no Painel SQL' : 'Painel de Controle Neon SQL'}
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="p-8 space-y-5">
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 text-sm font-bold animate-shake">
               <AlertCircle size={20} className="flex-shrink-0" />
               {error}
+            </div>
+          )}
+
+          {isRegistering && (
+            <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <input
+                  required
+                  type="text"
+                  placeholder="Seu nome"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-900"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
             </div>
           )}
 
@@ -62,7 +102,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <input
                 required
                 type="email"
-                placeholder="admin@devaro.com"
+                placeholder="exemplo@devaro.com"
                 className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-900"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -101,13 +141,25 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           >
             {loading ? <Loader2 className="animate-spin" size={24} /> : (
               <>
-                ACESSAR BANCO DE DADOS
-                <LogIn size={20} />
+                {isRegistering ? 'CADASTRAR AGORA' : 'ACESSAR PAINEL'}
+                {isRegistering ? <UserPlus size={20} /> : <LogIn size={20} />}
               </>
             )}
           </button>
           
-          <p className="text-[10px] text-center text-slate-400 font-medium">Credenciais padrão: admin@devaro.com / admin123</p>
+          <div className="text-center mt-6">
+            <button
+              type="button"
+              onClick={toggleMode}
+              className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
+            >
+              {isRegistering ? (
+                <>Já possui uma conta? <span className="text-blue-600 underline">Fazer Login</span></>
+              ) : (
+                <>Ainda não tem acesso? <span className="text-blue-600 underline">Criar Nova Conta</span></>
+              )}
+            </button>
+          </div>
         </form>
 
         <div className="p-6 text-center border-t border-slate-100 bg-slate-50/50">
