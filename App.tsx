@@ -35,75 +35,61 @@ const App: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
 
-  // Auth local (Neon DB Session)
   useEffect(() => {
     const storedUser = localStorage.getItem('devaro_session');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
-  // Sync View with URL
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (view === 'dashboard') {
-      url.searchParams.delete('view');
-    } else {
-      url.searchParams.set('view', view);
-    }
+    if (view === 'dashboard') url.searchParams.delete('view');
+    else url.searchParams.set('view', view);
     window.history.pushState({}, '', url.toString());
   }, [view]);
 
-  // Carregamento Inicial Neon DB
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Inicializa o banco ANTES de qualquer verificação de usuário
-        await initDatabase(); 
-        
-        // Se não houver usuário e não for showcase, paramos o loading para mostrar o Login
-        if (!user && view !== 'showcase') {
-          setIsLoading(false);
-          return;
-        }
-
-        // Carrega dados se houver usuário ou for showcase
-        const [dbClients, dbProducts, dbLinks, dbCatalog] = await Promise.all([
-          NeonService.getClients(),
-          NeonService.getProducts(),
-          NeonService.getSettings('payment_links'),
-          NeonService.getSettings('catalog_config')
-        ]);
-
-        const mappedClients = (dbClients as any[]).map(c => ({
-          ...c,
-          appName: c.app_name,
-          monthlyValue: Number(c.monthly_value),
-          dueDay: c.due_day,
-          paymentLink: c.payment_link,
-          createdAt: c.created_at
-        }));
-
-        const mappedProducts = (dbProducts as any[]).map(p => ({
-          ...p,
-          price: Number(p.price),
-          paymentMethods: p.payment_methods,
-          paymentLinkId: p.payment_link_id,
-          externalLink: p.external_link
-        }));
-
-        setClients(mappedClients);
-        setProducts(mappedProducts);
-        if (dbLinks) setPaymentLinks(dbLinks);
-        if (dbCatalog) setCatalogConfig(dbCatalog);
-      } catch (err) {
-        console.error('Neon Load Error:', err);
-      } finally {
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      await initDatabase(); 
+      if (!user && view !== 'showcase') {
         setIsLoading(false);
+        return;
       }
-    };
 
+      const [dbClients, dbProducts, dbLinks, dbCatalog] = await Promise.all([
+        NeonService.getClients(),
+        NeonService.getProducts(),
+        NeonService.getSettings('payment_links'),
+        NeonService.getSettings('catalog_config')
+      ]);
+
+      setClients((dbClients as any[]).map(c => ({
+        ...c,
+        appName: c.app_name,
+        monthlyValue: Number(c.monthly_value),
+        dueDay: c.due_day,
+        paymentLink: c.payment_link,
+        createdAt: c.created_at
+      })));
+
+      setProducts((dbProducts as any[]).map(p => ({
+        ...p,
+        price: Number(p.price),
+        paymentMethods: p.payment_methods || [],
+        paymentLinkId: p.payment_link_id,
+        externalLink: p.external_link
+      })));
+
+      if (dbLinks) setPaymentLinks(dbLinks);
+      if (dbCatalog) setCatalogConfig(dbCatalog);
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, [user, view]);
 
@@ -124,28 +110,26 @@ const App: React.FC = () => {
     setProducts((dbProducts as any[]).map(p => ({
       ...p,
       price: Number(p.price),
-      paymentMethods: p.payment_methods,
+      paymentMethods: p.payment_methods || [],
       paymentLinkId: p.payment_link_id,
       externalLink: p.external_link
     })));
   };
 
-  const handleSavePaymentLinks = async () => {
-    await NeonService.setSettings('payment_links', paymentLinks);
-    setIsLinkSaved(true);
-    setTimeout(() => setIsLinkSaved(false), 2000);
-  };
-
   const handleAddOrEditClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
-    if (editingClient) {
-      await NeonService.updateClient(editingClient.id, clientData);
-    } else {
-      await NeonService.addClient(clientData);
+    try {
+      if (editingClient) {
+        await NeonService.updateClient(editingClient.id, clientData);
+      } else {
+        await NeonService.addClient(clientData);
+      }
+      await refreshClients();
+      setIsModalOpen(false);
+      setEditingClient(null);
+      setInitialClientData(null);
+    } catch (e) {
+      alert('Erro ao salvar cliente. Verifique o console.');
     }
-    await refreshClients();
-    setIsModalOpen(false);
-    setEditingClient(null);
-    setInitialClientData(null);
   };
 
   const handleDeleteClient = async (id: string) => {
@@ -170,25 +154,9 @@ const App: React.FC = () => {
     await refreshProducts();
   };
 
-  const handleSelectProductFromShowcase = (product: Product) => {
-    const resolvedLink = paymentLinks[product.paymentLinkId || 'link1'] || paymentLinks.link1;
-    setInitialClientData({
-      appName: product.name,
-      monthlyValue: product.price,
-      paymentLink: resolvedLink,
-      status: ClientStatus.TESTING
-    });
-    setIsModalOpen(true);
-  };
-
   const handleSaveCatalogConfig = async (config: CatalogConfig) => {
     await NeonService.setSettings('catalog_config', config);
     setCatalogConfig(config);
-  };
-
-  const handleLoginSuccess = (userData: any) => {
-    localStorage.setItem('devaro_session', JSON.stringify(userData));
-    setUser(userData);
   };
 
   const handleLogout = () => {
@@ -199,11 +167,11 @@ const App: React.FC = () => {
   if (isLoading && view !== 'showcase') return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
       <Database className="animate-pulse text-indigo-500 mb-4" size={56} />
-      <p className="font-bold text-lg">Conectando ao Neon SQL...</p>
+      <p className="font-bold text-lg">Sincronizando Banco de Dados Neon...</p>
     </div>
   );
 
-  if (!user && view !== 'showcase') return <Login onLoginSuccess={handleLoginSuccess} />;
+  if (!user && view !== 'showcase') return <Login onLoginSuccess={(u) => { localStorage.setItem('devaro_session', JSON.stringify(u)); setUser(u); }} />;
 
   const renderContent = () => {
     switch (view) {
@@ -235,35 +203,41 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           onBack={() => setView('catalog')}
-          onSelectProduct={handleSelectProductFromShowcase}
+          onSelectProduct={(p) => {
+            setInitialClientData({
+              appName: p.name,
+              monthlyValue: p.price,
+              paymentLink: paymentLinks[p.paymentLinkId || 'link1'] || paymentLinks.link1,
+              status: ClientStatus.TESTING
+            });
+            setIsModalOpen(true);
+          }}
         />
       );
       case 'settings': return (
         <div className="max-w-3xl space-y-6 pb-20">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento (Neon Store)</h2>
+            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
                 <div key={key} className="space-y-2">
                   <label className="block text-xs font-black text-slate-400 uppercase">Gateway Canal {idx + 1}</label>
                   <input 
                     type="text" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
-                    placeholder={`https://pay.devaro.com/canal-${idx + 1}`}
+                    placeholder={`https://pay.devaro.com/link-${idx + 1}`}
                   />
                 </div>
               ))}
             </div>
             <button 
-              onClick={handleSavePaymentLinks}
-              className={`mt-8 w-full md:w-auto px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                isLinkSaved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
-              }`}
+              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); setIsLinkSaved(true); setTimeout(() => setIsLinkSaved(false), 2000); }}
+              className={`mt-8 px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${isLinkSaved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
             >
               {isLinkSaved ? <Check size={20} /> : <Save size={20} />}
-              {isLinkSaved ? 'Sincronizado no Neon DB' : 'Persistir no Banco de Dados'}
+              {isLinkSaved ? 'Sincronizado' : 'Salvar no Banco'}
             </button>
           </div>
         </div>
@@ -271,12 +245,6 @@ const App: React.FC = () => {
       default: return <Dashboard clients={clients} />;
     }
   };
-
-  const testingAlertsCount = clients.filter(client => {
-    if (client.status !== ClientStatus.TESTING) return false;
-    const diffDays = (new Date().getTime() - new Date(client.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays >= 5 && diffDays <= 7;
-  }).length;
 
   return (
     <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
@@ -294,11 +262,7 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
                   <Database size={12} className="text-indigo-600" />
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL Auth</span>
-                </div>
-                <div className="relative p-2.5 bg-slate-100 rounded-xl cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => setView('dashboard')}>
-                  <Bell size={20} className="text-slate-600" />
-                  {testingAlertsCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold">{testingAlertsCount}</span>}
+                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL Connect</span>
                 </div>
               </div>
             </div>
