@@ -4,7 +4,9 @@ const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4
 
 export const initDatabase = async () => {
   try {
-    // Tabela de Usuários (Autenticação)
+    console.log('Iniciando tabelas no Neon...');
+    
+    // Tabela de Usuários
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -13,13 +15,6 @@ export const initDatabase = async () => {
         name TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `);
-
-    // Inserir usuário padrão se não existir (admin123)
-    await sql(`
-      INSERT INTO users (email, password, name)
-      VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
-      ON CONFLICT (email) DO NOTHING;
     `);
 
     // Tabela de Clientes
@@ -39,7 +34,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Tabela de Produtos
+    // Tabela de Produtos (Ajustada para JSONB)
     await sql(`
       CREATE TABLE IF NOT EXISTS products (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,7 +42,7 @@ export const initDatabase = async () => {
         description TEXT,
         price NUMERIC(10,2),
         photo TEXT,
-        payment_methods TEXT[],
+        payment_methods JSONB,
         payment_link_id TEXT,
         external_link TEXT
       );
@@ -61,9 +56,16 @@ export const initDatabase = async () => {
       );
     `);
 
-    console.log('Neon Database & Auth initialized successfully');
+    // Usuário padrão
+    await sql(`
+      INSERT INTO users (email, password, name)
+      VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
+      ON CONFLICT (email) DO NOTHING;
+    `);
+
+    console.log('Neon Database pronta.');
   } catch (error) {
-    console.error('Failed to init database:', error);
+    console.error('Falha crítica ao iniciar banco:', error);
   }
 };
 
@@ -83,6 +85,7 @@ export const NeonService = {
       `, [name, email, password]);
       return result.length > 0 ? result[0] : null;
     } catch (error: any) {
+      console.error('Erro no registro de usuário:', error);
       if (error.message && error.message.includes('unique constraint')) {
         throw new Error('Este e-mail já está cadastrado.');
       }
@@ -94,23 +97,42 @@ export const NeonService = {
   async getClients() {
     return await sql('SELECT * FROM clients ORDER BY created_at DESC');
   },
+  
   async addClient(c: any) {
-    return await sql(`
-      INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
+    try {
+      const result = await sql(`
+        INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
+      console.log('Cliente salvo:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      throw error;
+    }
   },
+
   async updateClient(id: string, c: any) {
-    return await sql(`
-      UPDATE clients 
-      SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
-      WHERE id=$10
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+    try {
+      const result = await sql(`
+        UPDATE clients 
+        SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
+        WHERE id=$10
+        RETURNING *
+      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+      console.log('Cliente atualizado:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      throw error;
+    }
   },
+
   async updateClientStatus(id: string, status: string) {
     return await sql('UPDATE clients SET status=$1 WHERE id=$2', [status, id]);
   },
+
   async deleteClient(id: string) {
     return await sql('DELETE FROM clients WHERE id=$1', [id]);
   },
@@ -119,32 +141,64 @@ export const NeonService = {
   async getProducts() {
     return await sql('SELECT * FROM products');
   },
+
   async addProduct(p: any) {
-    return await sql(`
-      INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [p.name, p.description, p.price, p.photo, p.paymentMethods, p.paymentLinkId, p.externalLink]);
-  },
-  async updateProduct(id: string, p: any) {
-    return await sql(`
-      UPDATE products 
-      SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5, payment_link_id=$6, external_link=$7
-      WHERE id=$8
-    `, [p.name, p.description, p.price, p.photo, p.paymentMethods, p.paymentLinkId, p.externalLink, id]);
-  },
-  async deleteProduct(id: string) {
-    return await sql('DELETE FROM clients WHERE id=$1', [id]);
+    try {
+      const result = await sql(`
+        INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink]);
+      console.log('Produto salvo:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+      throw error;
+    }
   },
 
-  // Configurações Genéricas
+  async updateProduct(id: string, p: any) {
+    try {
+      const result = await sql(`
+        UPDATE products 
+        SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5, payment_link_id=$6, external_link=$7
+        WHERE id=$8
+        RETURNING *
+      `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink, id]);
+      console.log('Produto atualizado:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      throw error;
+    }
+  },
+
+  async deleteProduct(id: string) {
+    try {
+      const result = await sql('DELETE FROM products WHERE id=$1', [id]);
+      console.log('Produto deletado:', id);
+      return result;
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error);
+      throw error;
+    }
+  },
+
+  // Configurações
   async getSettings(key: string) {
     const res = await sql('SELECT value FROM settings WHERE key=$1', [key]);
     return res[0]?.value || null;
   },
+
   async setSettings(key: string, value: any) {
-    return await sql(`
-      INSERT INTO settings (key, value) VALUES ($1, $2)
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-    `, [key, JSON.stringify(value)]);
+    try {
+      return await sql(`
+        INSERT INTO settings (key, value) VALUES ($1, $2)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `, [key, JSON.stringify(value)]);
+    } catch (error) {
+      console.error('Erro ao salvar settings:', error);
+      throw error;
+    }
   }
 };
