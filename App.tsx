@@ -94,17 +94,14 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
-    console.log('App: Recarregando lista de clientes...');
     const dbClients = await NeonService.getClients();
     
-    // Debug visual no console para confirmar que os dados chegaram do banco
-    console.table(dbClients);
-
+    // Mapeamento corrigido para bater com as colunas reais do seu banco
     const mapped = (dbClients as any[]).map(c => ({
       ...c,
-      appName: c.app_name || 'Sem App',
-      monthlyValue: Number(c.monthly_value || 0),
-      dueDay: Number(c.due_day || 10),
+      appName: c.appname || 'Sem App',
+      monthlyValue: Number(c.monthlyvalue || 0),
+      dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
       createdAt: c.created_at || new Date().toISOString()
     }));
@@ -120,22 +117,18 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Dados atualizados no SQL!');
+        showToast('Atualizado no SQL!');
       } else {
-        const result = await NeonService.addClient(clientData);
-        if (result) {
-          showToast('Cliente salvo no Neon SQL!');
-        }
+        await NeonService.addClient(clientData);
+        showToast('Salvo no Neon SQL!');
       }
-      
-      // Forçar atualização da lista e fechar modal
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      console.error('Erro ao salvar cliente:', e);
-      showToast(e.message || 'Erro ao gravar no banco.', 'error');
+      console.error('Erro ao salvar:', e);
+      showToast('Erro ao salvar no banco.', 'error');
     }
   };
 
@@ -176,7 +169,7 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido do banco.'); }}}
+          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
           onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); await refreshClients(); showToast('Status alterado.'); }}
           paymentLink={paymentLinks.link1}
         />
@@ -189,12 +182,12 @@ const App: React.FC = () => {
           onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Identidade salva!'); }}
           onAddProduct={async (p) => { await NeonService.addProduct(p); loadData(); showToast('Produto adicionado!'); }}
           onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); loadData(); showToast('Produto atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover produto?')){ await NeonService.deleteProduct(id); loadData(); showToast('Produto removido.'); }}}
+          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); loadData(); showToast('Removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
       case 'settings': return (
-        <div className="max-w-3xl space-y-6 pb-20">
+        <div className="max-w-3xl space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Gateways de Pagamento</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -204,7 +197,7 @@ const App: React.FC = () => {
                   <input 
                     type="text" 
                     placeholder="Cole o link aqui..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
                   />
@@ -212,8 +205,8 @@ const App: React.FC = () => {
               ))}
             </div>
             <button 
-              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais de pagamento salvos!'); }}
-              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-3"
+              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Salvo!'); }}
+              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all flex items-center gap-3"
             >
               <Save size={20} /> SALVAR CONFIGURAÇÕES
             </button>
@@ -253,12 +246,7 @@ const App: React.FC = () => {
 
         <div className="p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1">
           {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando Neon...</span>
-              </div>
-            </div>
+            <div className="flex items-center justify-center h-64 text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando...</div>
           ) : renderContent()}
         </div>
 

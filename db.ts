@@ -19,9 +19,9 @@ const normalizeData = (data: any) => {
 
 export const initDatabase = async () => {
   try {
-    console.log('Neon: Sincronizando tabelas...');
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
+    // Tabela usando nomes de colunas sem underscores para bater com o print do usuário
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,20 +29,20 @@ export const initDatabase = async () => {
         email TEXT,
         whatsapp TEXT,
         address TEXT,
-        app_name TEXT,
-        monthly_value NUMERIC(10,2) DEFAULT 0,
-        due_day INTEGER DEFAULT 10,
+        appname TEXT,
+        monthlyvalue NUMERIC(10,2) DEFAULT 0,
+        dueday INTEGER DEFAULT 10,
         status TEXT DEFAULT 'ACTIVE',
         payment_link TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // Migrações preventivas
+    // Migrações para garantir que as colunas existam exatamente como o banco atual
     const migrations = [
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS app_name TEXT;`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthly_value NUMERIC(10,2) DEFAULT 0;`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 10;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`
     ];
@@ -52,10 +52,9 @@ export const initDatabase = async () => {
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
-    // Criar usuário admin padrão para acesso inicial se não existir
     await sql(`INSERT INTO users (email, password, name) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO') ON CONFLICT (email) DO NOTHING;`);
 
-    console.log('Neon: Pronto para uso.');
+    console.log('Neon: Banco sincronizado com as colunas reais.');
   } catch (error) {
     console.error('Neon: Erro ao inicializar banco:', error);
   }
@@ -75,18 +74,13 @@ export const NeonService = {
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     try {
-      console.log('Neon: Tentando salvar...', c);
+      console.log('Neon: Gravando novo registro...', c);
       const res = await sql(`
-        INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
+        INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, dueday, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
-      
-      if (res && res.length > 0) {
-        console.log('Neon: Salvo com ID:', res[0].id);
-        return res[0];
-      }
-      throw new Error("O banco não retornou o registro salvo.");
+      return res[0];
     } catch (error: any) {
       console.error('Neon: Erro fatal no INSERT:', error);
       throw error;
@@ -98,7 +92,7 @@ export const NeonService = {
     try {
       const res = await sql(`
         UPDATE clients 
-        SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
+        SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9
         WHERE id=$10
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
