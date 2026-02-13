@@ -7,10 +7,10 @@ export const initDatabase = async () => {
   try {
     console.log('Sincronizando Schema DevARO no Neon...');
     
-    // 1. Garantir que a extensão de UUID está ativa
+    // 1. Garantir pgcrypto
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // 2. Criar tabelas base
+    // 2. Criar tabelas com defaults seguros
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,9 +29,10 @@ export const initDatabase = async () => {
         whatsapp TEXT,
         address TEXT,
         app_name TEXT,
-        monthly_value NUMERIC(10,2),
-        due_day INTEGER,
-        status TEXT,
+        monthly_value NUMERIC(10,2) DEFAULT 0,
+        due_day INTEGER DEFAULT 10,
+        status TEXT DEFAULT 'ACTIVE',
+        payment_link TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -41,8 +42,11 @@ export const initDatabase = async () => {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
         description TEXT,
-        price NUMERIC(10,2),
-        photo TEXT
+        price NUMERIC(10,2) DEFAULT 0,
+        photo TEXT,
+        payment_methods JSONB DEFAULT '[]'::jsonb,
+        payment_link_id TEXT DEFAULT 'link1',
+        external_link TEXT
       );
     `);
 
@@ -53,45 +57,33 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 3. REFORÇO DE SCHEMA (Migrações para bancos existentes)
-    const setupCommands = [
-      // Garantir defaults para ID (resolve o erro de null constraint)
-      `ALTER TABLE users ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
+    // 3. Migrações de segurança para tabelas existentes
+    const migrations = [
       `ALTER TABLE clients ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
       `ALTER TABLE products ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
-      
-      // Garantir colunas adicionais em Clientes
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
-      
-      // Garantir colunas adicionais em Produtos
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`
     ];
 
-    for (const cmd of setupCommands) {
-      try {
-        await sql(cmd);
-      } catch (e) {
-        // Ignora erros de "coluna já existe" ou "default já definido"
-      }
+    for (const cmd of migrations) {
+      try { await sql(cmd); } catch (e) { /* ignore */ }
     }
 
-    // Usuário administrador padrão
+    // Admin padrão
     await sql(`
       INSERT INTO users (email, password, name)
       VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
       ON CONFLICT (email) DO NOTHING;
     `);
 
-    console.log('Neon Database: Schema atualizado com sucesso.');
   } catch (error) {
-    console.error('Falha crítica na inicialização do Banco:', error);
+    console.error('Falha na inicialização do Banco:', error);
   }
 };
 
 export const NeonService = {
-  // Autenticação
   async login(email: string, password: string) {
     const users = await sql('SELECT id, email, name FROM users WHERE email = $1 AND password = $2', [email, password]);
     return users.length > 0 ? users[0] : null;
@@ -106,34 +98,48 @@ export const NeonService = {
     return result[0];
   },
 
-  // Clientes
   async getClients() {
     return await sql('SELECT * FROM clients ORDER BY created_at DESC');
   },
   
   async addClient(c: any) {
     try {
-      console.log('Enviando cliente para o Neon...');
+      // Garantir que valores numéricos não sejam nulos ou NaN
+      const monthlyValue = isNaN(parseFloat(c.monthlyValue)) ? 0 : parseFloat(c.monthlyValue);
+      const dueDay = isNaN(parseInt(c.dueDay)) ? 10 : parseInt(c.dueDay);
+
       const res = await sql(`
         INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
-      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
-      console.log('Cliente salvo!');
-      return res;
+      `, [
+        c.name || 'Sem Nome', 
+        c.email || '', 
+        c.whatsapp || '', 
+        c.address || '', 
+        c.appName || 'App Indefinido', 
+        monthlyValue, 
+        dueDay, 
+        c.status || 'ACTIVE', 
+        c.paymentLink || ''
+      ]);
+      return res[0];
     } catch (error: any) {
-      console.error('Erro ao salvar cliente:', error.message);
+      console.error('Erro detalhado no SQL (addClient):', error.message);
       throw error;
     }
   },
 
   async updateClient(id: string, c: any) {
+    const monthlyValue = isNaN(parseFloat(c.monthlyValue)) ? 0 : parseFloat(c.monthlyValue);
+    const dueDay = isNaN(parseInt(c.dueDay)) ? 10 : parseInt(c.dueDay);
+
     return await sql(`
       UPDATE clients 
       SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
       WHERE id=$10
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, monthlyValue, dueDay, c.status, c.paymentLink, id]);
   },
 
   async updateClientStatus(id: string, status: string) {
@@ -144,34 +150,41 @@ export const NeonService = {
     return await sql('DELETE FROM clients WHERE id=$1', [id]);
   },
 
-  // Produtos
   async getProducts() {
     return await sql('SELECT * FROM products ORDER BY name ASC');
   },
 
   async addProduct(p: any) {
     try {
-      console.log('Enviando produto para o Neon...');
+      const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
       const result = await sql(`
         INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
         RETURNING *
-      `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '']);
-      console.log('Produto salvo!');
-      return result;
+      `, [
+        p.name || 'Novo Produto', 
+        p.description || '', 
+        price, 
+        p.photo || '', 
+        JSON.stringify(p.paymentMethods || []), 
+        p.paymentLinkId || 'link1', 
+        p.externalLink || ''
+      ]);
+      return result[0];
     } catch (error: any) {
-      console.error('Erro ao salvar produto:', error.message);
+      console.error('Erro detalhado no SQL (addProduct):', error.message);
       throw error;
     }
   },
 
   async updateProduct(id: string, p: any) {
+    const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
     return await sql(`
       UPDATE products 
       SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5::jsonb, payment_link_id=$6, external_link=$7
       WHERE id=$8
       RETURNING *
-    `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '', id]);
+    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '', id]);
   },
 
   async deleteProduct(id: string) {

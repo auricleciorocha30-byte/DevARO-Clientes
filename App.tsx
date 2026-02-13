@@ -52,7 +52,6 @@ const App: React.FC = () => {
     try {
       await initDatabase(); 
       
-      // Carrega produtos e configs independentemente de estar logado (para o Showcase)
       const [dbProducts, dbLinks, dbCatalog] = await Promise.all([
         NeonService.getProducts(),
         NeonService.getSettings('payment_links'),
@@ -70,7 +69,6 @@ const App: React.FC = () => {
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
 
-      // Só tenta carregar clientes se houver usuário
       if (user) {
         const dbClients = await NeonService.getClients();
         setClients((dbClients as any[]).map(c => ({
@@ -105,18 +103,7 @@ const App: React.FC = () => {
     })));
   };
 
-  const refreshProducts = async () => {
-    const dbProducts = await NeonService.getProducts();
-    setProducts((dbProducts as any[]).map(p => ({
-      ...p,
-      price: Number(p.price),
-      paymentMethods: p.payment_methods || [],
-      paymentLinkId: p.payment_link_id,
-      externalLink: p.external_link
-    })));
-  };
-
-  const handleAddOrEditClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
+  const handleAddOrEditClient = async (clientData: any) => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
@@ -127,51 +114,15 @@ const App: React.FC = () => {
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
-    } catch (e) {
-      alert('Erro ao salvar no Neon.');
+    } catch (e: any) {
+      alert(`Erro no banco Neon: ${e.message || 'Verifique sua conexão'}`);
     }
-  };
-
-  const handleDeleteClient = async (id: string) => {
-    if (confirm('Deseja remover este cliente?')) {
-      await NeonService.deleteClient(id);
-      await refreshClients();
-    }
-  };
-
-  const handleUpdateStatus = async (id: string, status: ClientStatus) => {
-    await NeonService.updateClientStatus(id, status);
-    await refreshClients();
-  };
-
-  const handleAddProduct = async (prodData: Omit<Product, 'id'>) => {
-    await NeonService.addProduct(prodData);
-    await refreshProducts();
-  };
-
-  const handleUpdateProduct = async (id: string, prodData: Omit<Product, 'id'>) => {
-    await NeonService.updateProduct(id, prodData);
-    await refreshProducts();
-  };
-
-  const handleSaveCatalogConfig = async (config: CatalogConfig) => {
-    await NeonService.setSettings('catalog_config', config);
-    setCatalogConfig(config);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('devaro_session');
     setUser(null);
   };
-
-  if (isLoading && view !== 'showcase') return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
-      <Database className="animate-pulse text-indigo-500 mb-4" size={56} />
-      <p className="font-bold text-lg">Conectando ao Neon SQL...</p>
-    </div>
-  );
-
-  if (!user && view !== 'showcase') return <Login onLoginSuccess={(u) => { localStorage.setItem('devaro_session', JSON.stringify(u)); setUser(u); }} />;
 
   const renderContent = () => {
     switch (view) {
@@ -181,8 +132,8 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={handleDeleteClient}
-          onUpdateStatus={handleUpdateStatus}
+          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); }}}
+          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); }}
           paymentLink={paymentLinks.link1}
         />
       );
@@ -191,10 +142,10 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
-          onSaveConfig={handleSaveCatalogConfig}
-          onAddProduct={handleAddProduct}
-          onUpdateProduct={handleUpdateProduct}
-          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); refreshProducts(); }}}
+          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); }}
+          onAddProduct={async (p) => { await NeonService.addProduct(p); loadData(); }}
+          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); loadData(); }}
+          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); loadData(); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -207,8 +158,9 @@ const App: React.FC = () => {
             setInitialClientData({
               appName: p.name,
               monthlyValue: p.price,
-              paymentLink: paymentLinks[p.paymentLinkId || 'link1'] || paymentLinks.link1,
-              status: ClientStatus.TESTING
+              paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
+              status: ClientStatus.TESTING,
+              dueDay: 10
             });
             setIsModalOpen(true);
           }}
@@ -261,7 +213,7 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL Connected</span>
+                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon Connected</span>
                 </div>
               </div>
             </div>
@@ -272,7 +224,7 @@ const App: React.FC = () => {
           <ClientModal 
             onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 
             onSave={handleAddOrEditClient}
-            initialData={editingClient || (initialClientData as Client)}
+            initialData={editingClient || initialClientData}
           />
         )}
       </main>
