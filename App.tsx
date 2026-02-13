@@ -69,12 +69,14 @@ const App: React.FC = () => {
         NeonService.getSettings('catalog_config')
       ]);
 
-      setProducts((dbProducts as any[]).map(p => ({
-        ...p, price: Number(p.price),
-        paymentMethods: p.payment_methods || [],
-        paymentLinkId: p.payment_link_id,
-        externalLink: p.external_link
-      })));
+      if (dbProducts) {
+        setProducts((dbProducts as any[]).map(p => ({
+          ...p, price: Number(p.price),
+          paymentMethods: p.payment_methods || [],
+          paymentLinkId: p.payment_link_id,
+          externalLink: p.external_link
+        })));
+      }
 
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
@@ -92,7 +94,12 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
+    console.log('App: Recarregando lista de clientes...');
     const dbClients = await NeonService.getClients();
+    
+    // Debug visual no console para confirmar que os dados chegaram do banco
+    console.table(dbClients);
+
     const mapped = (dbClients as any[]).map(c => ({
       ...c,
       appName: c.app_name || 'Sem App',
@@ -113,17 +120,22 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Dados atualizados!');
+        showToast('Dados atualizados no SQL!');
       } else {
-        await NeonService.addClient(clientData);
-        showToast('Cliente gravado no SQL!');
+        const result = await NeonService.addClient(clientData);
+        if (result) {
+          showToast('Cliente salvo no Neon SQL!');
+        }
       }
+      
+      // Forçar atualização da lista e fechar modal
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      showToast(e.message || 'Erro ao gravar.', 'error');
+      console.error('Erro ao salvar cliente:', e);
+      showToast(e.message || 'Erro ao gravar no banco.', 'error');
     }
   };
 
@@ -132,7 +144,6 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  // Se for vitrine pública, não exige login
   if (view === 'showcase') {
     return (
       <CatalogShowcase 
@@ -153,7 +164,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Se não estiver logado, mostra tela de login (Exceto showcase)
   if (!user && !isLoading) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
@@ -166,8 +176,8 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); showToast('Removido.'); }}}
-          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); showToast('Status atualizado.'); }}
+          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido do banco.'); }}}
+          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); await refreshClients(); showToast('Status alterado.'); }}
           paymentLink={paymentLinks.link1}
         />
       );
@@ -179,7 +189,7 @@ const App: React.FC = () => {
           onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Identidade salva!'); }}
           onAddProduct={async (p) => { await NeonService.addProduct(p); loadData(); showToast('Produto adicionado!'); }}
           onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); loadData(); showToast('Produto atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); loadData(); showToast('Produto removido.'); }}}
+          onDeleteProduct={async (id) => { if(confirm('Remover produto?')){ await NeonService.deleteProduct(id); loadData(); showToast('Produto removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -194,7 +204,7 @@ const App: React.FC = () => {
                   <input 
                     type="text" 
                     placeholder="Cole o link aqui..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
                   />
@@ -202,8 +212,8 @@ const App: React.FC = () => {
               ))}
             </div>
             <button 
-              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais salvos!'); }}
-              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all flex items-center gap-3"
+              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais de pagamento salvos!'); }}
+              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-3"
             >
               <Save size={20} /> SALVAR CONFIGURAÇÕES
             </button>
@@ -243,7 +253,12 @@ const App: React.FC = () => {
 
         <div className="p-4 lg:p-8 max-w-7xl mx-auto w-full flex-1">
           {isLoading ? (
-            <div className="flex items-center justify-center h-64 text-slate-400 font-bold uppercase text-xs tracking-widest">Sincronizando...</div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando Neon...</span>
+              </div>
+            </div>
           ) : renderContent()}
         </div>
 
