@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, X } from 'lucide-react';
+import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -10,7 +10,7 @@ interface CatalogShowcaseProps {
   onSelectProduct: (product: Product) => void;
 }
 
-const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onBack, onSelectProduct }) => {
+const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onSelectProduct }) => {
   const handleAction = (product: Product) => {
     if (product.externalLink && product.externalLink.trim() !== '') {
       const url = product.externalLink.startsWith('http') 
@@ -22,23 +22,8 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onB
     }
   };
 
-  // Verifica se é a visão administrativa ou pública
-  const params = new URLSearchParams(window.location.search);
-  const isPublicUrl = params.get('view') === 'showcase' && !window.opener && window.history.length <= 1;
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20 relative animate-in fade-in duration-500">
-      {/* Botão de Fechar (X): Unica forma de sair do encarte se não for URL pública */}
-      {!isPublicUrl && (
-        <button 
-          onClick={onBack}
-          title="Fechar Encarte"
-          className="fixed top-4 right-4 z-[100] p-4 bg-white/90 backdrop-blur-md shadow-2xl rounded-full text-slate-900 hover:bg-white active:scale-90 transition-all border border-slate-200 flex items-center justify-center lg:top-8 lg:right-8"
-        >
-          <X size={28} strokeWidth={3} />
-        </button>
-      )}
-
       {/* Header do Encarte */}
       <header className="w-full bg-blue-600 text-white p-8 md:p-14 text-center relative rounded-b-[48px] shadow-2xl shadow-blue-500/20 max-w-4xl">
         <div className="flex flex-col items-center gap-5">

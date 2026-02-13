@@ -94,10 +94,10 @@ const App: React.FC = () => {
   const refreshClients = async () => {
     const dbClients = await NeonService.getClients();
     
-    // MAPEAMENTO CRÍTICO: Neon retorna colunas minúsculas
+    // MAPEAMENTO CRÍTICO: Neon retorna colunas minúsculas (appname, monthlyvalue, etc)
     const mapped = (dbClients as any[]).map(c => ({
       ...c,
-      appName: c.appname || 'Sem Nome de App',
+      appName: c.appname || 'App Indefinido',
       monthlyValue: Number(c.monthlyvalue || 0),
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
@@ -116,10 +116,10 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Dados Atualizados!');
+        showToast('Dados Atualizados no SQL!');
       } else {
         await NeonService.addClient(clientData);
-        showToast('Cliente Cadastrado!');
+        showToast('Cliente Gravado no Neon!');
       }
       await refreshClients();
       setIsModalOpen(false);
@@ -127,7 +127,7 @@ const App: React.FC = () => {
       setInitialClientData(null);
     } catch (e: any) {
       console.error('Erro ao salvar no Neon:', e);
-      showToast('Erro ao gravar no SQL.', 'error');
+      showToast('Erro ao gravar no banco.', 'error');
     }
   };
 
@@ -160,7 +160,7 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
+          onDelete={async (id) => { if(confirm('Remover definitivamente do Neon?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
           onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); await refreshClients(); showToast('Status atualizado.'); }}
           paymentLink={paymentLinks.link1}
         />
@@ -170,10 +170,10 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
-          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Layout salvo!'); }}
-          onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('Produto adicionado!'); }}
+          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Identidade salva!'); }}
+          onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('Produto no Ar!'); }}
           onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('Produto atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover do encarte?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Removido.'); }}}
+          onDeleteProduct={async (id) => { if(confirm('Retirar do encarte?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -187,14 +187,14 @@ const App: React.FC = () => {
       );
       case 'settings': return (
         <div className="max-w-3xl bg-white p-8 rounded-[32px] shadow-sm border border-slate-100">
-          <h2 className="text-xl font-black mb-6 tracking-tight">Canais de Checkout Globais</h2>
+          <h2 className="text-xl font-black mb-6 tracking-tight">Gateways Globais</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
               <div key={key} className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gateway de Venda {idx + 1}</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal de Checkout {idx + 1}</label>
                 <input 
                   type="text" 
-                  placeholder="Link de Pagamento..."
+                  placeholder="Link da sua fatura..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all" 
                   value={paymentLinks[key]}
                   onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
@@ -203,10 +203,10 @@ const App: React.FC = () => {
             ))}
           </div>
           <button 
-            onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Configurações salvas!'); }}
+            onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }}
             className="mt-8 px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3"
           >
-            <Save size={20} /> ATUALIZAR GATEWAYS
+            <Save size={20} /> SALVAR ALTERAÇÕES
           </button>
         </div>
       );
@@ -249,7 +249,7 @@ const App: React.FC = () => {
           {isLoading ? (
             <div className="flex items-center justify-center h-64 flex-col gap-4">
                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-               <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Acessando Neon SQL...</span>
+               <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando com Neon...</span>
             </div>
           ) : renderContent()}
         </div>

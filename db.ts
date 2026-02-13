@@ -21,7 +21,7 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Tabela base
+    // Tabela base com colunas minúsculas para compatibilidade total
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -38,7 +38,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // MIGRATION: Garante que colunas críticas existam se a tabela já for antiga
+    // Migrações granulares para tabelas existentes
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
@@ -49,30 +49,28 @@ export const initDatabase = async () => {
     ];
     
     for (const cmd of migrations) { 
-      try { await sql(cmd); } catch (e) { console.debug('Migration info:', e); } 
+      try { await sql(cmd); } catch (e) { console.debug('Neon Migration info:', cmd); } 
     }
 
-    // Outras tabelas
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
     await sql(`INSERT INTO users (email, password, name) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO') ON CONFLICT (email) DO NOTHING;`);
 
-    console.log('Neon SQL: Banco de dados pronto e migrado.');
+    console.log('Neon SQL: Banco de dados inicializado com sucesso.');
   } catch (error) {
-    console.error('Neon SQL Fatal Error:', error);
+    console.error('Neon SQL: Falha crítica na inicialização:', error);
   }
 };
 
 export const NeonService = {
   async getClients() {
     try {
-      // Query sem ordem se der erro na coluna, mas aqui garantimos que a coluna existe via migração
+      // Usamos a coluna created_at que agora garantimos existir via migração
       return await sql('SELECT * FROM clients ORDER BY created_at DESC');
     } catch (e) {
-      console.error('Neon SQL: Erro ao buscar lista:', e);
-      // Fallback sem order by caso a migração falhe por algum motivo extremo
+      console.error('Neon SQL: Erro ao buscar lista de clientes:', e);
       try { return await sql('SELECT * FROM clients'); } catch { return []; }
     }
   },
@@ -87,7 +85,7 @@ export const NeonService = {
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
       return res[0];
     } catch (error: any) {
-      console.error('Neon SQL INSERT Error:', error);
+      console.error('Neon SQL: Erro ao inserir cliente:', error);
       throw error;
     }
   },
