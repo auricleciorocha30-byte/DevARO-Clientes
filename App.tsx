@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Check, Save, Database } from 'lucide-react';
+import { Menu, Check, Save, Database, Bell } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -17,14 +17,12 @@ const App: React.FC = () => {
     try {
       const params = new URLSearchParams(window.location.search);
       return (params.get('view') as View) || 'dashboard';
-    } catch {
-      return 'dashboard';
-    }
+    } catch { return 'dashboard'; }
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLinkSaved, setIsLinkSaved] = useState(false);
+  const [notification, setNotification] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
   
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,25 +43,24 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Correção: Envolver pushState em try-catch para evitar erros em blob URLs
     try {
       const url = new URL(window.location.href);
       if (url.protocol === 'blob:') return;
-
       if (view === 'dashboard') url.searchParams.delete('view');
       else url.searchParams.set('view', view);
-      
       window.history.pushState({}, '', url.toString());
-    } catch (e) {
-      console.warn('History API restrito neste ambiente:', e);
-    }
+    } catch (e) {}
   }, [view]);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
     try {
       await initDatabase(); 
-      
       const [dbProducts, dbLinks, dbCatalog] = await Promise.all([
         NeonService.getProducts(),
         NeonService.getSettings('payment_links'),
@@ -71,8 +68,7 @@ const App: React.FC = () => {
       ]);
 
       setProducts((dbProducts as any[]).map(p => ({
-        ...p,
-        price: Number(p.price),
+        ...p, price: Number(p.price),
         paymentMethods: p.payment_methods || [],
         paymentLinkId: p.payment_link_id,
         externalLink: p.external_link
@@ -84,34 +80,24 @@ const App: React.FC = () => {
       if (user) {
         const dbClients = await NeonService.getClients();
         setClients((dbClients as any[]).map(c => ({
-          ...c,
-          appName: c.app_name,
-          monthlyValue: Number(c.monthly_value),
-          dueDay: c.due_day,
-          paymentLink: c.payment_link,
-          createdAt: c.created_at
+          ...c, appName: c.app_name, monthlyValue: Number(c.monthly_value),
+          dueDay: c.due_day, paymentLink: c.payment_link, createdAt: c.created_at
         })));
       }
     } catch (err) {
-      console.error('Falha ao carregar Neon:', err);
+      console.error('Falha Neon:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [user, view]);
+  useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
     const dbClients = await NeonService.getClients();
     setClients((dbClients as any[]).map(c => ({
-      ...c,
-      appName: c.app_name,
-      monthlyValue: Number(c.monthly_value),
-      dueDay: c.due_day,
-      paymentLink: c.payment_link,
-      createdAt: c.created_at
+      ...c, appName: c.app_name, monthlyValue: Number(c.monthly_value),
+      dueDay: c.due_day, paymentLink: c.payment_link, createdAt: c.created_at
     })));
   };
 
@@ -119,15 +105,17 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
+        showToast('Dados do cliente atualizados!');
       } else {
         await NeonService.addClient(clientData);
+        showToast('Novo cliente cadastrado com sucesso!');
       }
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      alert(`Erro no banco Neon: ${e.message || 'Verifique se as colunas existem no banco'}`);
+      showToast(e.message || 'Erro ao gravar no banco.', 'error');
     }
   };
 
@@ -144,8 +132,8 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); }}}
-          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); }}
+          onDelete={async (id) => { if(confirm('Remover?')){ await NeonService.deleteClient(id); refreshClients(); showToast('Cliente removido.'); }}}
+          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); refreshClients(); showToast('Status alterado.'); }}
           paymentLink={paymentLinks.link1}
         />
       );
@@ -154,10 +142,10 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
-          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); }}
-          onAddProduct={async (p) => { await NeonService.addProduct(p); loadData(); }}
-          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); loadData(); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); loadData(); }}}
+          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Identidade salva!'); }}
+          onAddProduct={async (p) => { await NeonService.addProduct(p); loadData(); showToast('Produto adicionado!'); }}
+          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); loadData(); showToast('Produto atualizado!'); }}
+          onDeleteProduct={async (id) => { if(confirm('Remover?')){ await NeonService.deleteProduct(id); loadData(); showToast('Produto removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -181,14 +169,15 @@ const App: React.FC = () => {
       case 'settings': return (
         <div className="max-w-3xl space-y-6 pb-20">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Canais de Pagamento Globais</h2>
+            <h2 className="text-xl font-bold mb-6 text-slate-900 tracking-tight">Gateways de Pagamento</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
                 <div key={key} className="space-y-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase">Canal {idx + 1}</label>
+                  <label className="block text-xs font-black text-slate-400 uppercase">Gateway {idx + 1}</label>
                   <input 
                     type="text" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
+                    placeholder="Cole o link aqui..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
                     value={paymentLinks[key]}
                     onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
                   />
@@ -196,11 +185,10 @@ const App: React.FC = () => {
               ))}
             </div>
             <button 
-              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); setIsLinkSaved(true); setTimeout(() => setIsLinkSaved(false), 2000); }}
-              className={`mt-8 px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${isLinkSaved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+              onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais de pagamento salvos!'); }}
+              className="mt-8 px-10 py-4 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-3"
             >
-              {isLinkSaved ? <Check size={20} /> : <Save size={20} />}
-              {isLinkSaved ? 'Salvo' : 'Salvar Gateways'}
+              <Save size={20} /> SALVAR CONFIGURAÇÕES
             </button>
           </div>
         </div>
@@ -211,6 +199,14 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden ${view === 'showcase' ? 'flex-col' : ''}`}>
+      {/* Toast Notification */}
+      {notification && (
+        <div className={`fixed top-6 right-6 z-[200] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 duration-300 border ${notification.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
+           {notification.type === 'success' ? <Check size={24} /> : <Bell size={24} />}
+           <span className="font-bold tracking-tight">{notification.msg}</span>
+        </div>
+      )}
+
       {view !== 'showcase' && (
         <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
       )}
@@ -222,10 +218,10 @@ const App: React.FC = () => {
                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl"><Menu size={24} /></button>
                 <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO Panel</h1>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL</span>
+                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Neon Engine Active</span>
                 </div>
               </div>
             </div>

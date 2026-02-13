@@ -3,14 +3,29 @@ import { neon } from '@neondatabase/serverless';
 
 const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4cpa7j-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require');
 
+/**
+ * Utilitário para limpar e validar dados antes da gravação
+ */
+const normalizeData = (data: any) => {
+  return {
+    ...data,
+    name: (data.name || '').trim(),
+    email: (data.email || '').trim().toLowerCase(),
+    whatsapp: (data.whatsapp || '').replace(/\D/g, ''),
+    appName: (data.appName || '').trim(),
+    monthlyValue: isNaN(parseFloat(data.monthlyValue)) ? 0 : parseFloat(data.monthlyValue),
+    dueDay: isNaN(parseInt(data.dueDay)) ? 10 : Math.max(1, Math.min(31, parseInt(data.dueDay))),
+  };
+};
+
 export const initDatabase = async () => {
   try {
-    console.log('Sincronizando Schema DevARO no Neon...');
+    console.log('DevARO: Sincronizando tabelas no Neon SQL...');
     
-    // 1. Garantir pgcrypto para UUIDs
+    // Garantir extensões necessárias
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // 2. Criar tabelas se não existirem
+    // Estrutura Base
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,36 +72,30 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 3. Migrações FORÇADAS para garantir colunas em tabelas legadas
-    const migrations = [
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS app_name TEXT;`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthly_value NUMERIC(10,2) DEFAULT 0;`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 10;`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) DEFAULT 0;`
+    // Migrações preventivas (Sempre garante que colunas novas existam)
+    const columns = [
+      { table: 'clients', col: 'app_name', type: 'TEXT' },
+      { table: 'clients', col: 'monthly_value', type: 'NUMERIC(10,2) DEFAULT 0' },
+      { table: 'clients', col: 'payment_link', type: 'TEXT' },
+      { table: 'products', col: 'external_link', type: 'TEXT' },
+      { table: 'products', col: 'payment_link_id', type: 'TEXT DEFAULT \'link1\'' }
     ];
 
-    for (const cmd of migrations) {
+    for (const item of columns) {
       try {
-        await sql(cmd);
-      } catch (e) {
-        // Ignora erros se a coluna já existir ou se houver restrição
-      }
+        await sql(`ALTER TABLE ${item.table} ADD COLUMN IF NOT EXISTS ${item.col} ${item.type};`);
+      } catch (e) { /* Coluna já existe ou erro ignorável */ }
     }
 
-    // Admin padrão
+    // Criar admin padrão se não existir
     await sql(`
       INSERT INTO users (email, password, name)
-      VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
+      VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO')
       ON CONFLICT (email) DO NOTHING;
     `);
 
   } catch (error) {
-    console.error('Falha crítica na inicialização do Banco:', error);
+    console.error('Erro Crítico Neon:', error);
   }
 };
 
@@ -97,63 +106,40 @@ export const NeonService = {
   },
 
   async register(name: string, email: string, password: string) {
-    const result = await sql(`
-      INSERT INTO users (name, email, password)
-      VALUES ($1, $2, $3)
-      RETURNING id, email, name
-    `, [name, email, password]);
-    return result[0];
+    const res = await sql('INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, email, name', [name, email, password]);
+    return res[0];
   },
 
   async getClients() {
     return await sql('SELECT * FROM clients ORDER BY created_at DESC');
   },
   
-  async addClient(c: any) {
-    try {
-      const monthlyValue = isNaN(parseFloat(c.monthlyValue)) ? 0 : parseFloat(c.monthlyValue);
-      const dueDay = isNaN(parseInt(c.dueDay)) ? 10 : parseInt(c.dueDay);
-
-      const res = await sql(`
-        INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *
-      `, [
-        c.name || 'Sem Nome', 
-        c.email || '', 
-        c.whatsapp || '', 
-        c.address || '', 
-        c.appName || 'App Indefinido', 
-        monthlyValue, 
-        dueDay, 
-        c.status || 'ACTIVE', 
-        c.paymentLink || ''
-      ]);
-      return res[0];
-    } catch (error: any) {
-      console.error('Erro ao salvar cliente (addClient):', error);
-      throw error;
-    }
+  async addClient(rawData: any) {
+    const c = normalizeData(rawData);
+    const res = await sql(`
+      INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
+    return res[0];
   },
 
-  async updateClient(id: string, c: any) {
-    const monthlyValue = isNaN(parseFloat(c.monthlyValue)) ? 0 : parseFloat(c.monthlyValue);
-    const dueDay = isNaN(parseInt(c.dueDay)) ? 10 : parseInt(c.dueDay);
-
+  async updateClient(id: string, rawData: any) {
+    const c = normalizeData(rawData);
     return await sql(`
       UPDATE clients 
       SET name=$1, email=$2, whatsapp=$3, address=$4, app_name=$5, monthly_value=$6, due_day=$7, status=$8, payment_link=$9
       WHERE id=$10
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, monthlyValue, dueDay, c.status, c.paymentLink, id]);
-  },
-
-  async updateClientStatus(id: string, status: string) {
-    return await sql('UPDATE clients SET status=$1 WHERE id=$2', [status, id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
   },
 
   async deleteClient(id: string) {
     return await sql('DELETE FROM clients WHERE id=$1', [id]);
+  },
+
+  async updateClientStatus(id: string, status: string) {
+    return await sql('UPDATE clients SET status=$1 WHERE id=$2', [status, id]);
   },
 
   async getProducts() {
@@ -162,20 +148,12 @@ export const NeonService = {
 
   async addProduct(p: any) {
     const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
-    const result = await sql(`
+    const res = await sql(`
       INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
       RETURNING *
-    `, [
-      p.name || 'Novo Produto', 
-      p.description || '', 
-      price, 
-      p.photo || '', 
-      JSON.stringify(p.paymentMethods || []), 
-      p.paymentLinkId || 'link1', 
-      p.external_link || ''
-    ]);
-    return result[0];
+    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
+    return res[0];
   },
 
   async updateProduct(id: string, p: any) {
@@ -185,7 +163,7 @@ export const NeonService = {
       SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5::jsonb, payment_link_id=$6, external_link=$7
       WHERE id=$8
       RETURNING *
-    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '', id]);
+    `, [p.name, p.description, price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
   },
 
   async deleteProduct(id: string) {
@@ -198,9 +176,6 @@ export const NeonService = {
   },
 
   async setSettings(key: string, value: any) {
-    return await sql(`
-      INSERT INTO settings (key, value) VALUES ($1, $2)
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-    `, [key, JSON.stringify(value)]);
+    return await sql('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, JSON.stringify(value)]);
   }
 };
