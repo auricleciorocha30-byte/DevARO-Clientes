@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Bell, Menu, Check, Save, Database, Loader2 } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
@@ -56,16 +57,18 @@ const App: React.FC = () => {
   // Carregamento Inicial Neon DB
   useEffect(() => {
     const loadData = async () => {
-      // O showcase é a única tela pública
-      if (!user && view !== 'showcase') {
-        setIsLoading(false);
-        return;
-      }
-      
       setIsLoading(true);
       try {
-        await initDatabase(); // Garante tabelas e usuário padrão
+        // Inicializa o banco ANTES de qualquer verificação de usuário
+        await initDatabase(); 
         
+        // Se não houver usuário e não for showcase, paramos o loading para mostrar o Login
+        if (!user && view !== 'showcase') {
+          setIsLoading(false);
+          return;
+        }
+
+        // Carrega dados se houver usuário ou for showcase
         const [dbClients, dbProducts, dbLinks, dbCatalog] = await Promise.all([
           NeonService.getClients(),
           NeonService.getProducts(),
@@ -193,14 +196,14 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  if (!user && view !== 'showcase') return <Login onLoginSuccess={handleLoginSuccess} />;
-
   if (isLoading && view !== 'showcase') return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
       <Database className="animate-pulse text-indigo-500 mb-4" size={56} />
       <p className="font-bold text-lg">Conectando ao Neon SQL...</p>
     </div>
   );
+
+  if (!user && view !== 'showcase') return <Login onLoginSuccess={handleLoginSuccess} />;
 
   const renderContent = () => {
     switch (view) {
