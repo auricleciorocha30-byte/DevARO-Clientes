@@ -7,10 +7,10 @@ export const initDatabase = async () => {
   try {
     console.log('Sincronizando Schema DevARO no Neon...');
     
-    // 1. Garantir pgcrypto
+    // 1. Garantir pgcrypto para UUIDs
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // 2. Criar tabelas com defaults seguros
+    // 2. Criar tabelas com estrutura completa (se não existirem)
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,18 +57,24 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 3. Migrações de segurança para tabelas existentes
-    const migrations = [
-      `ALTER TABLE clients ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
-      `ALTER TABLE products ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`
+    // 3. Migrações de segurança agressivas (Garante colunas em tabelas que já existiam)
+    const clientMigrations = [
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS app_name TEXT;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthly_value NUMERIC(10,2) DEFAULT 0;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 10;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`
     ];
 
-    for (const cmd of migrations) {
-      try { await sql(cmd); } catch (e) { /* ignore */ }
+    const productMigrations = [
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) DEFAULT 0;`
+    ];
+
+    for (const cmd of [...clientMigrations, ...productMigrations]) {
+      try { await sql(cmd); } catch (e) { console.warn('Aviso na migração:', e); }
     }
 
     // Admin padrão
@@ -79,7 +85,7 @@ export const initDatabase = async () => {
     `);
 
   } catch (error) {
-    console.error('Falha na inicialização do Banco:', error);
+    console.error('Falha crítica na inicialização do Banco:', error);
   }
 };
 
@@ -104,7 +110,6 @@ export const NeonService = {
   
   async addClient(c: any) {
     try {
-      // Garantir que valores numéricos não sejam nulos ou NaN
       const monthlyValue = isNaN(parseFloat(c.monthlyValue)) ? 0 : parseFloat(c.monthlyValue);
       const dueDay = isNaN(parseInt(c.dueDay)) ? 10 : parseInt(c.dueDay);
 
@@ -125,7 +130,7 @@ export const NeonService = {
       ]);
       return res[0];
     } catch (error: any) {
-      console.error('Erro detalhado no SQL (addClient):', error.message);
+      console.error('Erro ao salvar cliente (addClient):', error);
       throw error;
     }
   },
@@ -155,26 +160,21 @@ export const NeonService = {
   },
 
   async addProduct(p: any) {
-    try {
-      const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
-      const result = await sql(`
-        INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
-        RETURNING *
-      `, [
-        p.name || 'Novo Produto', 
-        p.description || '', 
-        price, 
-        p.photo || '', 
-        JSON.stringify(p.paymentMethods || []), 
-        p.paymentLinkId || 'link1', 
-        p.externalLink || ''
-      ]);
-      return result[0];
-    } catch (error: any) {
-      console.error('Erro detalhado no SQL (addProduct):', error.message);
-      throw error;
-    }
+    const price = isNaN(parseFloat(p.price)) ? 0 : parseFloat(p.price);
+    const result = await sql(`
+      INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
+      RETURNING *
+    `, [
+      p.name || 'Novo Produto', 
+      p.description || '', 
+      price, 
+      p.photo || '', 
+      JSON.stringify(p.paymentMethods || []), 
+      p.paymentLinkId || 'link1', 
+      p.externalLink || ''
+    ]);
+    return result[0];
   },
 
   async updateProduct(id: string, p: any) {
