@@ -5,9 +5,12 @@ const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4
 
 export const initDatabase = async () => {
   try {
-    console.log('Verificando integridade das tabelas Neon...');
+    console.log('Sincronizando Schema DevARO no Neon...');
     
-    // 1. Criar tabelas se não existirem
+    // 1. Garantir que a extensão de UUID está ativa
+    await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
+
+    // 2. Criar tabelas base
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -50,32 +53,40 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 2. Garantir que colunas novas existam (MIGRAÇÃO FORÇADA)
-    const migrations = [
-      { table: 'clients', col: 'payment_link', type: 'TEXT' },
-      { table: 'products', col: 'payment_methods', type: 'JSONB' },
-      { table: 'products', col: 'payment_link_id', type: 'TEXT' },
-      { table: 'products', col: 'external_link', type: 'TEXT' }
+    // 3. REFORÇO DE SCHEMA (Migrações para bancos existentes)
+    const setupCommands = [
+      // Garantir defaults para ID (resolve o erro de null constraint)
+      `ALTER TABLE users ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
+      `ALTER TABLE clients ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
+      `ALTER TABLE products ALTER COLUMN id SET DEFAULT gen_random_uuid();`,
+      
+      // Garantir colunas adicionais em Clientes
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
+      
+      // Garantir colunas adicionais em Produtos
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`
     ];
 
-    for (const m of migrations) {
+    for (const cmd of setupCommands) {
       try {
-        await sql(`ALTER TABLE ${m.table} ADD COLUMN IF NOT EXISTS ${m.col} ${m.type}`);
+        await sql(cmd);
       } catch (e) {
-        console.warn(`Coluna ${m.col} já existe ou erro na migração.`);
+        // Ignora erros de "coluna já existe" ou "default já definido"
       }
     }
 
-    // Usuário padrão
+    // Usuário administrador padrão
     await sql(`
       INSERT INTO users (email, password, name)
       VALUES ('admin@devaro.com', 'admin123', 'Administrador DevARO')
       ON CONFLICT (email) DO NOTHING;
     `);
 
-    console.log('Neon Database Sincronizada.');
+    console.log('Neon Database: Schema atualizado com sucesso.');
   } catch (error) {
-    console.error('Falha ao sincronizar Neon:', error);
+    console.error('Falha crítica na inicialização do Banco:', error);
   }
 };
 
@@ -102,14 +113,16 @@ export const NeonService = {
   
   async addClient(c: any) {
     try {
-      console.log('Salvando cliente:', c);
-      return await sql(`
+      console.log('Enviando cliente para o Neon...');
+      const res = await sql(`
         INSERT INTO clients (name, email, whatsapp, address, app_name, monthly_value, due_day, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
+      console.log('Cliente salvo!');
+      return res;
     } catch (error: any) {
-      console.error('Erro Neon (addClient):', error.message);
+      console.error('Erro ao salvar cliente:', error.message);
       throw error;
     }
   },
@@ -138,15 +151,16 @@ export const NeonService = {
 
   async addProduct(p: any) {
     try {
-      console.log('Salvando produto:', p);
+      console.log('Enviando produto para o Neon...');
       const result = await sql(`
         INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
         RETURNING *
-      `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink]);
+      `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '']);
+      console.log('Produto salvo!');
       return result;
     } catch (error: any) {
-      console.error('Erro Neon (addProduct):', error.message);
+      console.error('Erro ao salvar produto:', error.message);
       throw error;
     }
   },
@@ -157,7 +171,7 @@ export const NeonService = {
       SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5::jsonb, payment_link_id=$6, external_link=$7
       WHERE id=$8
       RETURNING *
-    `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods), p.paymentLinkId, p.externalLink, id]);
+    `, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId || 'link1', p.externalLink || '', id]);
   },
 
   async deleteProduct(id: string) {
