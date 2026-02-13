@@ -10,7 +10,7 @@ export const initDatabase = async () => {
     // 1. Garantir pgcrypto para UUIDs
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // 2. Criar tabelas com estrutura completa (se não existirem)
+    // 2. Criar tabelas se não existirem
     await sql(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,24 +57,25 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 3. Migrações de segurança agressivas (Garante colunas em tabelas que já existiam)
-    const clientMigrations = [
+    // 3. Migrações FORÇADAS para garantir colunas em tabelas legadas
+    const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS app_name TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthly_value NUMERIC(10,2) DEFAULT 0;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS due_day INTEGER DEFAULT 10;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`
-    ];
-
-    const productMigrations = [
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_methods JSONB DEFAULT '[]'::jsonb;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS payment_link_id TEXT DEFAULT 'link1';`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS external_link TEXT;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) DEFAULT 0;`
     ];
 
-    for (const cmd of [...clientMigrations, ...productMigrations]) {
-      try { await sql(cmd); } catch (e) { console.warn('Aviso na migração:', e); }
+    for (const cmd of migrations) {
+      try {
+        await sql(cmd);
+      } catch (e) {
+        // Ignora erros se a coluna já existir ou se houver restrição
+      }
     }
 
     // Admin padrão
@@ -172,7 +173,7 @@ export const NeonService = {
       p.photo || '', 
       JSON.stringify(p.paymentMethods || []), 
       p.paymentLinkId || 'link1', 
-      p.externalLink || ''
+      p.external_link || ''
     ]);
     return result[0];
   },

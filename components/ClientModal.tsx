@@ -31,7 +31,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
         whatsapp: (initialData as any).whatsapp || prev.whatsapp,
         address: (initialData as any).address || prev.address,
         appName: initialData.appName || prev.appName,
-        monthlyValue: initialData.monthlyValue || prev.monthlyValue,
+        monthlyValue: Number(initialData.monthlyValue) || prev.monthlyValue,
         dueDay: (initialData as any).dueDay || prev.dueDay,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink,
@@ -45,7 +45,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
       <div 
         className="bg-white w-full sm:max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in duration-300 max-h-[92vh] sm:max-h-[95vh] flex flex-col rounded-t-3xl sm:rounded-2xl"
       >
@@ -67,7 +67,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto pb-10 sm:pb-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nome do Cliente</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nome Completo</label>
               <input
                 required
                 type="text"
@@ -104,10 +104,13 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
             </div>
 
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-              <label className="block text-[10px] font-black text-blue-400 uppercase mb-2">Resumo do App</label>
+              <label className="block text-[10px] font-black text-blue-400 uppercase mb-2">Resumo da Assinatura</label>
               <div className="flex justify-between items-center">
                 <span className="font-bold text-slate-800">{formData.appName || 'Selecionando...'}</span>
-                <span className="text-blue-600 font-black">R$ {formData.monthlyValue.toFixed(2)}</span>
+                <div className="text-right">
+                  <span className="text-blue-600 font-black">R$ {formData.monthlyValue.toFixed(2)}</span>
+                  <span className="text-[10px] text-slate-400 block">por mês</span>
+                </div>
               </div>
             </div>
 
@@ -124,6 +127,18 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData 
                 />
               </div>
             )}
+            
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cidade / Bairro</label>
+              <input
+                required
+                type="text"
+                placeholder="Ex: São Paulo - Centro"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-base"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+              />
+            </div>
           </div>
 
           <div className="pt-4">

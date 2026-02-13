@@ -14,8 +14,12 @@ import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [view, setView] = useState<View>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return (params.get('view') as View) || 'dashboard';
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return (params.get('view') as View) || 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -41,10 +45,18 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (view === 'dashboard') url.searchParams.delete('view');
-    else url.searchParams.set('view', view);
-    window.history.pushState({}, '', url.toString());
+    // Correção: Envolver pushState em try-catch para evitar erros em blob URLs
+    try {
+      const url = new URL(window.location.href);
+      if (url.protocol === 'blob:') return;
+
+      if (view === 'dashboard') url.searchParams.delete('view');
+      else url.searchParams.set('view', view);
+      
+      window.history.pushState({}, '', url.toString());
+    } catch (e) {
+      console.warn('History API restrito neste ambiente:', e);
+    }
   }, [view]);
 
   const loadData = async () => {
@@ -115,7 +127,7 @@ const App: React.FC = () => {
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      alert(`Erro no banco Neon: ${e.message || 'Verifique sua conexão'}`);
+      alert(`Erro no banco Neon: ${e.message || 'Verifique se as colunas existem no banco'}`);
     }
   };
 
@@ -157,7 +169,7 @@ const App: React.FC = () => {
           onSelectProduct={(p) => {
             setInitialClientData({
               appName: p.name,
-              monthlyValue: p.price,
+              monthlyValue: Number(p.price),
               paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
               status: ClientStatus.TESTING,
               dueDay: 10
@@ -213,7 +225,7 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon Connected</span>
+                  <span className="text-[10px] font-black text-indigo-600 uppercase">Neon SQL</span>
                 </div>
               </div>
             </div>
