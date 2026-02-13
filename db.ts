@@ -21,7 +21,7 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Criar tabela com colunas exatamente como no print do usuário
+    // Tabela com nomes de colunas sem underscore para bater com o print do usuário
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -38,7 +38,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Migrações silenciosas para garantir compatibilidade
+    // Migrações garantindo nomes exatos
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
@@ -54,9 +54,9 @@ export const initDatabase = async () => {
 
     await sql(`INSERT INTO users (email, password, name) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO') ON CONFLICT (email) DO NOTHING;`);
 
-    console.log('Neon: Banco de dados sincronizado.');
+    console.log('Neon SQL: Infraestrutura pronta.');
   } catch (error) {
-    console.error('Neon: Erro ao inicializar banco:', error);
+    console.error('Neon SQL: Erro de inicialização:', error);
   }
 };
 
@@ -64,10 +64,9 @@ export const NeonService = {
   async getClients() {
     try {
       const rows = await sql('SELECT * FROM clients ORDER BY created_at DESC');
-      console.log(`Neon: Buscados ${rows.length} registros da tabela 'clients'`);
       return rows;
     } catch (e) {
-      console.error('Neon: Erro ao buscar clientes:', e);
+      console.error('Neon SQL: Erro ao buscar clientes:', e);
       return [];
     }
   },
@@ -75,28 +74,38 @@ export const NeonService = {
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     try {
+      console.log('Neon SQL: Iniciando INSERT de cliente...', c);
       const res = await sql(`
         INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, dueday, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
-      console.log('Neon: Novo cliente registrado no SQL com sucesso.');
-      return res[0];
+      
+      if (res && res.length > 0) {
+        console.log('Neon SQL: Cliente cadastrado com sucesso.');
+        return res[0];
+      }
+      throw new Error("Banco de dados não retornou o registro após salvar.");
     } catch (error: any) {
-      console.error('Neon: Erro fatal no INSERT:', error);
+      console.error('Neon SQL: Erro crítico no salvamento:', error);
       throw error;
     }
   },
 
   async updateClient(id: string, rawData: any) {
     const c = normalizeData(rawData);
-    const res = await sql(`
-      UPDATE clients 
-      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9
-      WHERE id=$10
-      RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
-    return res[0];
+    try {
+      const res = await sql(`
+        UPDATE clients 
+        SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9
+        WHERE id=$10
+        RETURNING *
+      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+      return res[0];
+    } catch (e) {
+      console.error('Neon SQL: Erro ao atualizar cliente:', e);
+      throw e;
+    }
   },
 
   async deleteClient(id: string) {
