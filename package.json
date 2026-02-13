@@ -1,3 +1,4 @@
+
 {
   "name": "devaro-crm",
   "private": true,
@@ -8,7 +9,9 @@
     "react-dom": "18.3.1",
     "lucide-react": "0.460.0",
     "recharts": "2.13.3",
-    "@google/genai": "1.3.0"
+    "@google/genai": "1.3.0",
+    "@neondatabase/serverless": "0.9.4",
+    "firebase": "10.13.0"
   },
   "devDependencies": {
     "vite": "^6.0.0",
