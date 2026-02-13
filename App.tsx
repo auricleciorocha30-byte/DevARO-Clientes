@@ -81,7 +81,6 @@ const App: React.FC = () => {
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
 
-      // Carrega clientes se estiver logado ou se for visualização pública
       await refreshClients();
     } catch (err) {
       console.error('Falha Neon:', err);
@@ -95,7 +94,7 @@ const App: React.FC = () => {
   const refreshClients = async () => {
     const dbClients = await NeonService.getClients();
     
-    // MAPEAMENTO CRÍTICO: Neon retorna 'appname' (minúsculo) -> App usa 'appName' (camelCase)
+    // MAPEAMENTO CRÍTICO: Neon retorna colunas minúsculas
     const mapped = (dbClients as any[]).map(c => ({
       ...c,
       appName: c.appname || 'Sem Nome de App',
@@ -117,18 +116,18 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Atualizado no Banco!');
+        showToast('Dados Atualizados!');
       } else {
         await NeonService.addClient(clientData);
-        showToast('Cadastrado no Neon!');
+        showToast('Cliente Cadastrado!');
       }
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      console.error('Erro ao salvar:', e);
-      showToast('Erro ao salvar no banco.', 'error');
+      console.error('Erro ao salvar no Neon:', e);
+      showToast('Erro ao gravar no SQL.', 'error');
     }
   };
 
@@ -137,7 +136,6 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  // Funções para o Catálogo Digital
   const openPurchaseModal = (p: Product) => {
     setInitialClientData({
       appName: p.name,
@@ -162,7 +160,7 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Excluir registro?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
+          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
           onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); await refreshClients(); showToast('Status atualizado.'); }}
           paymentLink={paymentLinks.link1}
         />
@@ -172,10 +170,10 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
-          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Configuração salva!'); }}
-          onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('Adicionado!'); }}
-          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('Atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover produto?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Removido.'); }}}
+          onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Layout salvo!'); }}
+          onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('Produto adicionado!'); }}
+          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('Produto atualizado!'); }}
+          onDeleteProduct={async (id) => { if(confirm('Remover do encarte?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -188,15 +186,16 @@ const App: React.FC = () => {
         />
       );
       case 'settings': return (
-        <div className="max-w-3xl bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-xl font-bold mb-6">Configurações de Pagamento</h2>
+        <div className="max-w-3xl bg-white p-8 rounded-[32px] shadow-sm border border-slate-100">
+          <h2 className="text-xl font-black mb-6 tracking-tight">Canais de Checkout Globais</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
-              <div key={key} className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase">Checkout {idx + 1}</label>
+              <div key={key} className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gateway de Venda {idx + 1}</label>
                 <input 
                   type="text" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Link de Pagamento..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all" 
                   value={paymentLinks[key]}
                   onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
                 />
@@ -204,10 +203,10 @@ const App: React.FC = () => {
             ))}
           </div>
           <button 
-            onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Links salvos!'); }}
-            className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+            onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Configurações salvas!'); }}
+            className="mt-8 px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3"
           >
-            <Save size={18} /> Salvar Canais
+            <Save size={20} /> ATUALIZAR GATEWAYS
           </button>
         </div>
       );
@@ -220,9 +219,9 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden">
       {notification && (
-        <div className={`fixed top-6 right-6 z-[250] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 border ${notification.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
+        <div className={`fixed top-6 right-6 z-[300] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 border ${notification.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
            {notification.type === 'success' ? <Check size={24} /> : <Bell size={24} />}
-           <span className="font-bold">{notification.msg}</span>
+           <span className="font-bold tracking-tight">{notification.msg}</span>
         </div>
       )}
 
@@ -238,6 +237,10 @@ const App: React.FC = () => {
                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 rounded-xl"><Menu size={24} /></button>
                 <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO CRM</h1>
               </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Neon SQL Online</span>
+              </div>
             </div>
           </header>
         )}
@@ -246,7 +249,7 @@ const App: React.FC = () => {
           {isLoading ? (
             <div className="flex items-center justify-center h-64 flex-col gap-4">
                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-               <span className="text-slate-400 font-bold text-xs uppercase">Sincronizando Neon...</span>
+               <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Acessando Neon SQL...</span>
             </div>
           ) : renderContent()}
         </div>

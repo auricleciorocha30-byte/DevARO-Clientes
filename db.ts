@@ -21,7 +21,7 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Tabela com nomes de colunas sem underscore para bater com o print do usuário
+    // Tabela base
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -38,74 +38,69 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Migrações garantindo nomes exatos
+    // MIGRATION: Garante que colunas críticas existam se a tabela já for antiga
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';`,
-      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_link TEXT;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
     ];
-    for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
+    
+    for (const cmd of migrations) { 
+      try { await sql(cmd); } catch (e) { console.debug('Migration info:', e); } 
+    }
 
+    // Outras tabelas
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
     await sql(`INSERT INTO users (email, password, name) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO') ON CONFLICT (email) DO NOTHING;`);
 
-    console.log('Neon SQL: Infraestrutura pronta.');
+    console.log('Neon SQL: Banco de dados pronto e migrado.');
   } catch (error) {
-    console.error('Neon SQL: Erro de inicialização:', error);
+    console.error('Neon SQL Fatal Error:', error);
   }
 };
 
 export const NeonService = {
   async getClients() {
     try {
-      const rows = await sql('SELECT * FROM clients ORDER BY created_at DESC');
-      return rows;
+      // Query sem ordem se der erro na coluna, mas aqui garantimos que a coluna existe via migração
+      return await sql('SELECT * FROM clients ORDER BY created_at DESC');
     } catch (e) {
-      console.error('Neon SQL: Erro ao buscar clientes:', e);
-      return [];
+      console.error('Neon SQL: Erro ao buscar lista:', e);
+      // Fallback sem order by caso a migração falhe por algum motivo extremo
+      try { return await sql('SELECT * FROM clients'); } catch { return []; }
     }
   },
   
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     try {
-      console.log('Neon SQL: Iniciando INSERT de cliente...', c);
       const res = await sql(`
         INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, dueday, status, payment_link)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink]);
-      
-      if (res && res.length > 0) {
-        console.log('Neon SQL: Cliente cadastrado com sucesso.');
-        return res[0];
-      }
-      throw new Error("Banco de dados não retornou o registro após salvar.");
+      return res[0];
     } catch (error: any) {
-      console.error('Neon SQL: Erro crítico no salvamento:', error);
+      console.error('Neon SQL INSERT Error:', error);
       throw error;
     }
   },
 
   async updateClient(id: string, rawData: any) {
     const c = normalizeData(rawData);
-    try {
-      const res = await sql(`
-        UPDATE clients 
-        SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9
-        WHERE id=$10
-        RETURNING *
-      `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
-      return res[0];
-    } catch (e) {
-      console.error('Neon SQL: Erro ao atualizar cliente:', e);
-      throw e;
-    }
+    const res = await sql(`
+      UPDATE clients 
+      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9
+      WHERE id=$10
+      RETURNING *
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, id]);
+    return res[0];
   },
 
   async deleteClient(id: string) {
