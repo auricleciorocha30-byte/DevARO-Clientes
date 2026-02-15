@@ -273,6 +273,7 @@ const App: React.FC = () => {
             onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 
             onSave={handleAddOrEditClient}
             initialData={editingClient || initialClientData}
+            globalLinks={paymentLinks}
           />
         )}
       </main>
