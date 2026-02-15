@@ -67,7 +67,6 @@ export const initDatabase = async () => {
 export const NeonService = {
   async getClients() {
     try {
-      // Usamos a coluna created_at que agora garantimos existir via migração
       return await sql('SELECT * FROM clients ORDER BY created_at DESC');
     } catch (e) {
       console.error('Neon SQL: Erro ao buscar lista de clientes:', e);
@@ -106,7 +105,9 @@ export const NeonService = {
   },
 
   async updateClientStatus(id: string, status: string) {
-    return await sql('UPDATE clients SET status=$1 WHERE id=$2', [status, id]);
+    // IMPORTANTE: Garantir nome da coluna 'status' em minúsculo e retornar o resultado
+    const res = await sql('UPDATE clients SET status=$1 WHERE id=$2 RETURNING *', [status.toUpperCase(), id]);
+    return res[0];
   },
 
   async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },

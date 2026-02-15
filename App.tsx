@@ -116,10 +116,10 @@ const App: React.FC = () => {
     try {
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, clientData);
-        showToast('Dados Atualizados no SQL!');
+        showToast('Dados Atualizados!');
       } else {
         await NeonService.addClient(clientData);
-        showToast('Cliente Gravado no Neon!');
+        showToast('Cliente Gravado!');
       }
       await refreshClients();
       setIsModalOpen(false);
@@ -134,6 +134,20 @@ const App: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('devaro_session');
     setUser(null);
+  };
+
+  const handleUpdateStatus = async (id: string, s: ClientStatus) => {
+    try {
+      await NeonService.updateClientStatus(id, s);
+      // Atualização otimista local para agilidade na UI
+      setClients(prev => prev.map(c => c.id === id ? { ...c, status: s } : c));
+      showToast('Status atualizado.');
+    } catch (error) {
+      console.error('Erro ao mudar status:', error);
+      showToast('Erro ao atualizar status.', 'error');
+      // Reverte se der erro buscando do servidor novamente
+      await refreshClients();
+    }
   };
 
   const openPurchaseModal = (p: Product) => {
@@ -160,8 +174,8 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover definitivamente do Neon?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
-          onUpdateStatus={async (id, s) => { await NeonService.updateClientStatus(id, s); await refreshClients(); showToast('Status atualizado.'); }}
+          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
+          onUpdateStatus={handleUpdateStatus}
           paymentLink={paymentLinks.link1}
         />
       );
