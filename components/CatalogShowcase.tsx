@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink } from 'lucide-react';
+import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, Info } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -23,7 +23,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20 relative animate-in fade-in duration-500">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-32 relative animate-in fade-in duration-500">
       {/* Header do Encarte */}
       <header className="w-full bg-blue-600 text-white p-8 md:p-14 text-center relative rounded-b-[48px] shadow-2xl shadow-blue-500/20 max-w-4xl">
         <div className="flex flex-col items-center gap-5">
@@ -53,6 +53,19 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
 
       {/* Lista de Produtos */}
       <main className="w-full max-w-2xl px-4 mt-12 space-y-8">
+        {/* Banner de Aviso de Pagamento */}
+        <div className="bg-white p-6 rounded-[32px] border border-blue-100 flex items-center gap-4 shadow-sm animate-pulse">
+           <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+              <Info size={24} />
+           </div>
+           <div>
+              <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Venda Segura DevARO</p>
+              <p className="text-[10px] text-slate-500 font-bold leading-relaxed mt-1">
+                A contratação é finalizada através do contato de um consultor. Não pedimos dados de cartão agora.
+              </p>
+           </div>
+        </div>
+
         <div className="flex items-center justify-between px-4">
           <h2 className="text-2xl font-black text-slate-900">Catálogo Disponível</h2>
           <div className="flex items-center gap-2 bg-slate-200/50 px-3 py-1 rounded-lg">
@@ -87,7 +100,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                 
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Forma de Pagamento</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Checkout Manual</span>
                     <div className="flex gap-1.5 mt-1">
                       {product.paymentMethods && product.paymentMethods.length > 0 ? product.paymentMethods.map(m => (
                         <span key={m} className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
@@ -95,7 +108,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                         </span>
                       )) : (
                         <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-400 px-3 py-1 rounded-full border border-slate-200">
-                          PIX Liberado
+                          PIX / Cartão via Contato
                         </span>
                       )}
                     </div>
@@ -106,7 +119,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                     className="flex items-center gap-3 px-8 py-4 bg-blue-600 text-white font-black rounded-[20px] shadow-2xl shadow-blue-500/40 active:scale-95 transition-all hover:bg-blue-700 hover:shadow-blue-500/60"
                   >
                     {product.externalLink ? <ExternalLink size={20} /> : <ShoppingCart size={20} />}
-                    <span className="tracking-tight uppercase">{product.externalLink ? 'Conhecer App' : 'Contratar'}</span>
+                    <span className="tracking-tight uppercase">{product.externalLink ? 'Conhecer App' : 'Fazer Pedido'}</span>
                   </button>
                 </div>
               </div>
@@ -125,9 +138,16 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
         <div className="py-12 text-center space-y-3">
            <div className="w-12 h-1 bg-slate-200 mx-auto rounded-full mb-6"></div>
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">DevARO Cloud Infrastructure</p>
-           <p className="text-[10px] text-slate-300 font-bold">PostgreSQL via Neon Serverless</p>
+           <p className="text-[10px] text-slate-300 font-bold">Solicite seu app e aguarde nosso contato.</p>
         </div>
       </main>
+
+      {/* FOOTER FIXO DE INFORMAÇÃO */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-100 p-4 text-center z-[100] hidden sm:block">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+          Atenção: Nenhum valor será cobrado ao finalizar o pedido. Um colaborador entrará em contato para fechar a venda.
+        </p>
+      </footer>
     </div>
   );
 };
