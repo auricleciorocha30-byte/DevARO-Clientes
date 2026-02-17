@@ -19,7 +19,12 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return (params.get('view') as View) || 'dashboard';
+      const v = params.get('view') as View;
+      // Se for vendedor, impede acesso a views administrativas
+      if (user?.role === 'SELLER' && ['settings', 'sellers', 'messages'].includes(v)) {
+        return 'dashboard';
+      }
+      return v || 'dashboard';
     } catch { return 'dashboard'; }
   });
 
@@ -60,6 +65,7 @@ const App: React.FC = () => {
   };
 
   const loadData = async () => {
+    // Portal de recrutamento não precisa carregar tudo agora
     if (view === 'seller_register') {
       setIsLoading(false);
       return;
@@ -103,6 +109,7 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
+    // Regra: Vendedor só vê os seus. Admin vê todos.
     const sellerId = user?.role === 'SELLER' ? user.id : undefined;
     const dbClients = await NeonService.getClients(sellerId);
     const mapped = (dbClients as any[]).map(c => ({
@@ -132,15 +139,16 @@ const App: React.FC = () => {
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
+      // Regra de Venda: Se for vendedor, salva o ID dele. Se for Admin, usa o ID selecionado ou nulo.
       const finalSellerId = user?.role === 'SELLER' ? user.id : (clientData.seller_id || null);
       const dataToSave = { ...clientData, seller_id: finalSellerId };
       
       if (editingClient) {
         await NeonService.updateClient(editingClient.id, dataToSave);
-        showToast('Venda Atualizada!');
+        showToast('Dados Atualizados!');
       } else {
         await NeonService.addClient(dataToSave);
-        showToast('Venda Registrada!');
+        showToast('Nova Venda Registrada!');
       }
       await refreshClients();
       setIsModalOpen(false);
@@ -162,11 +170,12 @@ const App: React.FC = () => {
   };
 
   const handleCopySellerLink = () => {
-    const url = window.location.origin + window.location.pathname + '?portal=seller';
+    const url = window.location.origin + window.location.pathname + '?view=seller_register';
     navigator.clipboard.writeText(url);
-    showToast('Link de cadastro copiado!');
+    showToast('Link do portal copiado!');
   };
 
+  // View Externa de Cadastro de Vendedor
   if (view === 'seller_register') {
     return (
       <Login 
@@ -176,6 +185,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Se não estiver logado, mostra Login (Exceto se for Catálogo Público)
   if (!user && !isLoading && view !== 'showcase') {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
@@ -195,21 +205,25 @@ const App: React.FC = () => {
           paymentLink={paymentLinks.link1}
         />
       );
-      case 'sellers': return (
-        <SellersManager 
-          sellers={sellers}
-          role={user?.role}
-          onAddSeller={async (data) => { await NeonService.registerSeller(data); await refreshSellers(); showToast('Vendedor cadastrado!'); }}
-          onUpdateSeller={async (id, data) => { await NeonService.updateSeller(id, data); await refreshSellers(); showToast('Salvo!'); }}
-          onDeleteSeller={async (id) => { if(confirm('Excluir este vendedor?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Vendedor excluído.'); }}}
-        />
-      );
-      case 'messages': return (
-        <AdminMessages 
-          sellers={sellers}
-          onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); showToast('Alerta enviado!'); }}
-        />
-      );
+      case 'sellers': 
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        return (
+          <SellersManager 
+            sellers={sellers}
+            role={user?.role}
+            onAddSeller={async (data) => { await NeonService.registerSeller(data); await refreshSellers(); showToast('Vendedor cadastrado!'); }}
+            onUpdateSeller={async (id, data) => { await NeonService.updateSeller(id, data); await refreshSellers(); showToast('Dados salvos!'); }}
+            onDeleteSeller={async (id) => { if(confirm('Excluir este vendedor?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Vendedor removido.'); }}}
+          />
+        );
+      case 'messages': 
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        return (
+          <AdminMessages 
+            sellers={sellers}
+            onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); showToast('Mensagem enviada!'); }}
+          />
+        );
       case 'catalog': return (
         <CatalogAdmin 
           products={products}
@@ -219,7 +233,7 @@ const App: React.FC = () => {
           onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Layout atualizado!'); }}
           onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('App publicado!'); }}
           onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('App atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover do encarte?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Produto removido.'); }}}
+          onDeleteProduct={async (id) => { if(confirm('Remover do catálogo?')){ await NeonService.deleteProduct(id); await loadData(); showToast('App removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -240,23 +254,25 @@ const App: React.FC = () => {
           }}
         />
       );
-      case 'settings': return (
-        <div className="max-w-3xl bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-          <h2 className="text-2xl font-black mb-4 tracking-tight">Canais Globais</h2>
-          <p className="text-sm text-slate-500 mb-8 font-medium">Configure os checkouts padrão para os produtos do catálogo.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
-              <div key={key} className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Checkout Canal {idx + 1}</label>
-                <input type="text" placeholder="Cole o link..." className="w-full bg-slate-50 border border-slate-200 rounded-[24px] px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all shadow-inner" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
-              </div>
-            ))}
+      case 'settings': 
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        return (
+          <div className="max-w-4xl bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 animate-in fade-in duration-500">
+            <h2 className="text-3xl font-black mb-2 tracking-tighter">Canais de Checkout</h2>
+            <p className="text-sm text-slate-500 mb-10 font-bold uppercase tracking-tight">Vincule os links globais para os produtos do encarte.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
+                <div key={key} className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal de Pagamento {idx + 1}</label>
+                  <input type="text" placeholder="https://pay.exemplo.com/..." className="w-full bg-slate-50 border border-slate-200 rounded-[28px] px-8 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all shadow-inner" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
+                </div>
+              ))}
+            </div>
+            <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Links salvos!'); }} className="mt-12 px-16 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-[0.97] transition-all flex items-center gap-4">
+              <Save size={28} /> SALVAR CONFIGURAÇÕES
+            </button>
           </div>
-          <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais salvos!'); }} className="mt-10 px-12 py-5 bg-blue-600 text-white rounded-[24px] font-black text-lg shadow-2xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3">
-            <Save size={24} /> SALVAR CONFIGURAÇÕES
-          </button>
-        </div>
-      );
+        );
       default: return <Dashboard clients={clients} sellers={sellers} userRole={user?.role} />;
     }
   };
@@ -264,11 +280,13 @@ const App: React.FC = () => {
   const showSidebar = view !== 'showcase' && view !== 'seller_register';
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden font-sans">
       {notification && (
-        <div className={`fixed top-8 right-8 z-[300] px-8 py-5 rounded-[24px] shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 border ${notification.type === 'success' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
-           {notification.type === 'success' ? <Check size={28} /> : <Bell size={28} />}
-           <span className="font-black tracking-tight text-lg">{notification.msg}</span>
+        <div className={`fixed top-10 right-10 z-[300] px-10 py-6 rounded-[32px] shadow-2xl flex items-center gap-5 animate-in slide-in-from-right-10 border-4 ${notification.type === 'success' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
+           <div className="bg-white/20 p-2 rounded-xl">
+             {notification.type === 'success' ? <Check size={32} /> : <Bell size={32} />}
+           </div>
+           <span className="font-black tracking-tight text-xl">{notification.msg}</span>
         </div>
       )}
 
@@ -285,48 +303,51 @@ const App: React.FC = () => {
       
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${showSidebar ? 'lg:ml-72' : ''}`}>
         {showSidebar && (
-          <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-100 p-6 lg:p-8">
+          <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-100 p-8 lg:p-10">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
-              <div className="flex items-center gap-4">
-                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-2xl active:scale-90 transition-all"><Menu size={24} /></button>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">DevARO <span className="text-blue-600 font-light not-italic tracking-normal">{user?.role === 'SELLER' ? 'Consultoria' : 'Admin'}</span></h1>
+              <div className="flex items-center gap-6">
+                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-4 bg-slate-100 rounded-[20px] active:scale-90 transition-all shadow-sm"><Menu size={28} /></button>
+                <div>
+                  <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
+                    DevARO <span className="text-blue-600 font-light not-italic tracking-normal">{user?.role === 'SELLER' ? 'Consultoria' : 'Admin'}</span>
+                  </h1>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gestão de Vendas em Nuvem</p>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                {user?.role === 'SELLER' && <NotificationBell messages={messages} clients={clients} />}
+              <div className="flex items-center gap-6">
+                <NotificationBell messages={messages} clients={clients} />
+                
                 {user?.role === 'ADMIN' && (
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={handleCopySellerLink}
-                      className="p-3 bg-slate-100 border border-slate-200 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-sm flex items-center gap-2 font-black text-[10px] uppercase"
-                      title="Copiar Link de Recrutamento"
-                    >
-                      <LinkIcon size={18} /> Portal
-                    </button>
-                    <button 
-                      onClick={() => setView('messages')}
-                      className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm"
-                      title="Comunicados"
-                    >
-                      <Send size={24} />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={handleCopySellerLink}
+                    className="hidden md:flex items-center gap-3 px-6 py-4 bg-slate-900 text-white rounded-[20px] font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                    title="Copiar link para novos vendedores se cadastrarem"
+                  >
+                    <LinkIcon size={18} /> Link Portal
+                  </button>
                 )}
-                <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-blue-50 border border-blue-100 rounded-2xl">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{user?.name}</span>
+
+                <div className="hidden sm:flex flex-col items-end">
+                  <div className="flex items-center gap-3 px-5 py-3 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></div>
+                    <span className="text-[11px] font-black text-blue-700 uppercase tracking-widest">{user?.name}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </header>
         )}
 
-        <div className={`${showSidebar ? 'p-6 lg:p-10' : ''} max-w-7xl mx-auto w-full flex-1`}>
+        <div className={`${showSidebar ? 'p-8 lg:p-12' : ''} max-w-7xl mx-auto w-full flex-1`}>
           {isLoading ? (
-            <div className="flex items-center justify-center h-96 flex-col gap-6">
-               <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
+            <div className="flex items-center justify-center h-[70vh] flex-col gap-8">
+               <div className="relative">
+                 <div className="w-20 h-20 border-8 border-slate-100 rounded-full"></div>
+                 <div className="w-20 h-20 border-8 border-blue-600 border-t-transparent rounded-full animate-spin shadow-2xl absolute top-0"></div>
+               </div>
                <div className="text-center">
-                 <span className="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] block mb-2">Neon SQL Sync</span>
-                 <p className="text-slate-500 font-bold text-sm">Carregando dados DevARO...</p>
+                 <span className="text-slate-400 font-black text-[12px] uppercase tracking-[0.5em] block mb-3">Neon SQL Pipeline</span>
+                 <p className="text-slate-900 font-black text-2xl tracking-tight">Sincronizando DevARO...</p>
                </div>
             </div>
           ) : renderContent()}
