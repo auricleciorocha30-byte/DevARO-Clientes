@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // Added Loader2 to the lucide-react import list
-import { Menu, Check, Save, Database, Bell, Send, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Menu, Check, Save, Database, Bell, Send, Link as LinkIcon, Loader2, Map } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -10,6 +10,7 @@ import ClientModal from './components/ClientModal';
 import CatalogAdmin from './components/CatalogAdmin';
 import CatalogShowcase from './components/CatalogShowcase';
 import SellersManager from './components/SellersManager';
+import SellersLocation from './components/SellersLocation';
 import AdminMessages from './components/AdminMessages';
 import NotificationBell from './components/NotificationBell';
 import Login from './components/Login';
@@ -40,6 +41,36 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [initialClientData, setInitialClientData] = useState<Partial<Client> | null>(null);
+
+  const watchIdRef = useRef<number | null>(null);
+
+  // Efeito para rastreamento de localização em tempo real (Consultores)
+  useEffect(() => {
+    if (user?.role === 'SELLER') {
+      if ('geolocation' in navigator) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              await NeonService.updateSellerLocation(user.id, latitude, longitude);
+            } catch (err) {
+              console.error('Erro ao atualizar localização:', err);
+            }
+          },
+          (error) => {
+            console.warn('Erro GPS:', error.message);
+          },
+          { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+        );
+      }
+    }
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [user]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('devaro_session');
@@ -209,6 +240,9 @@ const App: React.FC = () => {
             onDeleteSeller={async (id) => { if(confirm('Excluir vendedor?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Vendedor removido.'); }}}
           />
         );
+      case 'sellers_location':
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
+        return <SellersLocation sellers={sellers} />;
       case 'messages': 
         if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
         return (

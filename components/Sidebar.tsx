@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag, LogOut, UserCheck, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag, LogOut, UserCheck, Send, Download, Map } from 'lucide-react';
 import { View } from '../types';
 
 interface SidebarProps {
@@ -14,12 +14,30 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose, onLogout, role }) => {
   const isAdmin = role === 'ADMIN';
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const menuItems = [
     { id: 'dashboard' as View, label: 'Painel Geral', icon: LayoutDashboard },
     { id: 'clients' as View, label: 'Minhas Vendas', icon: Users },
     { id: 'catalog' as View, label: 'Catálogo & Links', icon: ShoppingBag },
     { id: 'messages' as View, label: 'Enviar Alertas', icon: Send, hidden: !isAdmin },
+    { id: 'sellers_location' as View, label: 'Rastreamento', icon: Map, hidden: !isAdmin },
     { id: 'sellers' as View, label: 'Gestão Vendedores', icon: UserCheck, hidden: !isAdmin },
     { id: 'settings' as View, label: 'Configurações', icon: Settings, hidden: !isAdmin },
   ].filter(item => !item.hidden);
@@ -61,6 +79,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
               </button>
             );
           })}
+
+          {deferredPrompt && (
+            <button 
+              onClick={handleInstall}
+              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 mt-8 group"
+            >
+              <Download size={22} className="group-hover:bounce" />
+              <span className="font-black text-sm tracking-tight">Instalar Portal</span>
+            </button>
+          )}
         </nav>
         <div className="p-6 border-t border-slate-800/50 bg-slate-900/50 space-y-5">
           <button onClick={() => confirm('Deseja realmente encerrar sua sessão?') && onLogout()} className="w-full flex items-center gap-4 px-6 py-5 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-black text-sm active:scale-95 group">
@@ -68,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
           </button>
           <div className="px-6 text-center lg:text-left">
             <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">DevARO CRM Cloud</p>
-            <p className="text-slate-600 text-[9px] font-bold mt-1">Infrastructure v1.5.5</p>
+            <p className="text-slate-600 text-[9px] font-bold mt-1">Infrastructure v1.6.0-PWA</p>
           </div>
         </div>
       </aside>

@@ -19,6 +19,9 @@ export interface Seller {
   address: string;
   approved: boolean;
   active: boolean;
+  lat?: number;
+  lng?: number;
+  last_seen?: string;
   createdAt: string;
 }
 
@@ -79,4 +82,4 @@ export interface SellerPermissions {
   canDeleteClients: boolean;
 }
 
-export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages';
+export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages' | 'sellers_location';

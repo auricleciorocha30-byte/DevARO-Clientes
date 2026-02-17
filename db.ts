@@ -49,6 +49,9 @@ export const initDatabase = async () => {
         address TEXT,
         approved BOOLEAN DEFAULT FALSE,
         active BOOLEAN DEFAULT TRUE,
+        lat DOUBLE PRECISION,
+        lng DOUBLE PRECISION,
+        last_seen TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -75,7 +78,10 @@ export const initDatabase = async () => {
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS address TEXT;`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`,
+      `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`,
+      `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;`,
+      `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE;`
     ];
     
     for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
@@ -120,8 +126,12 @@ export const NeonService = {
   async deleteClient(id: string) { return await sql('DELETE FROM clients WHERE id=$1', [id]); },
   async updateClientStatus(id: string, status: string) { return await sql('UPDATE clients SET status=$1 WHERE id=$2 RETURNING *', [status.toUpperCase(), id]); },
 
-  async getSellers() { return await sql('SELECT * FROM sellers ORDER BY created_at DESC'); },
+  async getSellers() { return await sql('SELECT id, name, email, address, approved, active, lat, lng, last_seen, created_at FROM sellers ORDER BY created_at DESC'); },
   
+  async updateSellerLocation(id: string, lat: number, lng: number) {
+    return await sql('UPDATE sellers SET lat=$1, lng=$2, last_seen=CURRENT_TIMESTAMP WHERE id=$3 RETURNING *', [lat, lng, id]);
+  },
+
   async registerSeller(data: any) {
     const res = await sql(`
       INSERT INTO sellers (name, email, password, address, approved, active)
