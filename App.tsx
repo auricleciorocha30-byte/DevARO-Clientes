@@ -19,12 +19,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const v = params.get('view') as View;
-      // Se for vendedor, impede acesso a views administrativas
-      if (user?.role === 'SELLER' && ['settings', 'sellers', 'messages'].includes(v)) {
-        return 'dashboard';
-      }
-      return v || 'dashboard';
+      return (params.get('view') as View) || 'dashboard';
     } catch { return 'dashboard'; }
   });
 
@@ -65,7 +60,6 @@ const App: React.FC = () => {
   };
 
   const loadData = async () => {
-    // Portal de recrutamento não precisa carregar tudo agora
     if (view === 'seller_register') {
       setIsLoading(false);
       return;
@@ -109,7 +103,6 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
-    // Regra: Vendedor só vê os seus. Admin vê todos.
     const sellerId = user?.role === 'SELLER' ? user.id : undefined;
     const dbClients = await NeonService.getClients(sellerId);
     const mapped = (dbClients as any[]).map(c => ({
@@ -139,7 +132,6 @@ const App: React.FC = () => {
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
-      // Regra de Venda: Se for vendedor, salva o ID dele. Se for Admin, usa o ID selecionado ou nulo.
       const finalSellerId = user?.role === 'SELLER' ? user.id : (clientData.seller_id || null);
       const dataToSave = { ...clientData, seller_id: finalSellerId };
       
@@ -180,14 +172,14 @@ const App: React.FC = () => {
     return (
       <Login 
         onLoginSuccess={handleLoginSuccess} 
-        isSellerRegistration={true} 
+        isAdminMode={false} 
       />
     );
   }
 
-  // Se não estiver logado, mostra Login (Exceto se for Catálogo Público)
+  // Se não estiver logado e não for catálogo público, mostra Login Admin
   if (!user && !isLoading && view !== 'showcase') {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} isAdminMode={true} />;
   }
 
   const renderContent = () => {
@@ -321,9 +313,9 @@ const App: React.FC = () => {
                   <button 
                     onClick={handleCopySellerLink}
                     className="hidden md:flex items-center gap-3 px-6 py-4 bg-slate-900 text-white rounded-[20px] font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
-                    title="Copiar link para novos vendedores se cadastrarem"
+                    title="Link do Portal Vendedor"
                   >
-                    <LinkIcon size={18} /> Link Portal
+                    <LinkIcon size={18} /> Portal
                   </button>
                 )}
 
