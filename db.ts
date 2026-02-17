@@ -22,7 +22,6 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Clients Table
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -40,7 +39,6 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Sellers Table
     await sql(`
       CREATE TABLE IF NOT EXISTS sellers (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,22 +52,30 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Users and Config Tables
+    await sql(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        content TEXT NOT NULL,
+        receiver_email TEXT,
+        sender_name TEXT DEFAULT 'Admin',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
-    // Migrations for columns
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS seller_id UUID;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`
     ];
     
     for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
 
-    // Admin Default
     await sql(`INSERT INTO users (email, password, name, role) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO', 'ADMIN') ON CONFLICT (email) DO NOTHING;`);
 
     console.log('Neon SQL: Sincronizado.');
@@ -79,7 +85,6 @@ export const initDatabase = async () => {
 };
 
 export const NeonService = {
-  // CLIENTS
   async getClients(sellerId?: string) {
     if (sellerId) {
       return await sql('SELECT * FROM clients WHERE seller_id = $1 ORDER BY created_at DESC', [sellerId]);
@@ -111,7 +116,6 @@ export const NeonService = {
   async deleteClient(id: string) { return await sql('DELETE FROM clients WHERE id=$1', [id]); },
   async updateClientStatus(id: string, status: string) { return await sql('UPDATE clients SET status=$1 WHERE id=$2 RETURNING *', [status.toUpperCase(), id]); },
 
-  // SELLERS
   async getSellers() { return await sql('SELECT * FROM sellers ORDER BY created_at DESC'); },
   
   async registerSeller(data: any) {
@@ -132,7 +136,6 @@ export const NeonService = {
 
   async deleteSeller(id: string) { return await sql('DELETE FROM sellers WHERE id=$1', [id]); },
 
-  // AUTH
   async login(email: string, password: string) {
     const admins = await sql('SELECT id, email, name, role FROM users WHERE email = $1 AND password = $2', [email, password]);
     if (admins.length > 0) return admins[0];
@@ -147,7 +150,14 @@ export const NeonService = {
     return null;
   },
 
-  // PRODUCTS & SETTINGS
+  async getMessages(email: string) {
+    return await sql('SELECT * FROM messages WHERE receiver_email = $1 OR receiver_email IS NULL ORDER BY created_at DESC', [email]);
+  },
+
+  async addMessage(content: string, receiverEmail: string | null, senderName: string) {
+    return await sql('INSERT INTO messages (content, receiver_email, sender_name) VALUES ($1, $2, $3) RETURNING *', [content, receiverEmail, senderName]);
+  },
+
   async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },
   async addProduct(p: any) {
     const res = await sql(`INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);

@@ -33,8 +33,16 @@ export interface Client {
   dueDay: number;
   status: ClientStatus;
   paymentLink: string;
-  seller_id?: string; // ID do vendedor que realizou a venda
+  seller_id?: string;
   createdAt: string;
+}
+
+export interface AppMessage {
+  id: string;
+  content: string;
+  receiver_email: string | null; // null means "General"
+  sender_name: string;
+  created_at: string;
 }
 
 export enum PaymentMethod {
@@ -67,4 +75,4 @@ export interface GlobalPaymentLinks {
   link4: string;
 }
 
-export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register';
+export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages';

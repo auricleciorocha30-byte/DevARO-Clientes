@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag, LogOut, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Code2, X, ShoppingBag, LogOut, UserCheck, Send } from 'lucide-react';
 import { View } from '../types';
 
 interface SidebarProps {
@@ -19,7 +19,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clients' as View, label: 'Minhas Vendas', icon: Users },
     { id: 'catalog' as View, label: 'Apps & Links', icon: ShoppingBag },
-    { id: 'sellers' as View, label: 'Vendedores', icon: UserCheck }, // Vendedores agora podem acessar para cadastrar outros
+    { id: 'messages' as View, label: 'Enviar Alertas', icon: Send, hidden: !isAdmin },
+    { id: 'sellers' as View, label: 'Vendedores', icon: UserCheck, hidden: !isAdmin }, // Só admin gerencia outros
     { id: 'settings' as View, label: 'Configurações', icon: Settings, hidden: !isAdmin },
   ].filter(item => !item.hidden);
 
