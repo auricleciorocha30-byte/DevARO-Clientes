@@ -27,9 +27,9 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notification, setNotification] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
   
-  const [clients, setClients] = useState<Client[]>(() => JSON.parse(localStorage.getItem('cache_clients') || '[]'));
-  const [products, setProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('cache_products') || '[]'));
-  const [sellers, setSellers] = useState<Seller[]>(() => JSON.parse(localStorage.getItem('cache_sellers') || '[]'));
+  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   
   const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({ link1: '', link2: '', link3: '', link4: '' });
@@ -60,6 +60,7 @@ const App: React.FC = () => {
   };
 
   const loadData = async () => {
+    // Se for portal de recrutamento externo, pula o resto da carga de dados pesada
     if (view === 'seller_register') {
       setIsLoading(false);
       return;
@@ -81,7 +82,6 @@ const App: React.FC = () => {
           externalLink: p.external_link
         }));
         setProducts(mapped);
-        localStorage.setItem('cache_products', JSON.stringify(mapped));
       }
 
       if (dbLinks) setPaymentLinks(dbLinks);
@@ -115,18 +115,17 @@ const App: React.FC = () => {
       createdAt: c.created_at || new Date().toISOString()
     }));
     setClients(mapped);
-    localStorage.setItem('cache_clients', JSON.stringify(mapped));
   };
 
   const refreshSellers = async () => {
     const dbSellers = await NeonService.getSellers();
     setSellers(dbSellers as Seller[]);
-    localStorage.setItem('cache_sellers', JSON.stringify(dbSellers));
   };
 
   const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     localStorage.setItem('devaro_session', JSON.stringify(userData));
+    // Redireciona para o dashboard após login de qualquer tipo
     setView('dashboard');
   };
 
@@ -140,14 +139,14 @@ const App: React.FC = () => {
         showToast('Dados Atualizados!');
       } else {
         await NeonService.addClient(dataToSave);
-        showToast('Nova Venda Registrada!');
+        showToast('Venda Cadastrada com Sucesso!');
       }
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      showToast('Erro ao sincronizar venda.', 'error');
+      showToast('Erro ao salvar venda.', 'error');
     }
   };
 
@@ -155,19 +154,19 @@ const App: React.FC = () => {
     try {
       await NeonService.updateClientStatus(id, s);
       setClients(prev => prev.map(c => c.id === id ? { ...c, status: s } : c));
-      showToast('Status atualizado.');
+      showToast('Status modificado.');
     } catch (error) {
-      showToast('Erro de conexão.', 'error');
+      showToast('Erro ao atualizar status.', 'error');
     }
   };
 
   const handleCopySellerLink = () => {
     const url = window.location.origin + window.location.pathname + '?view=seller_register';
     navigator.clipboard.writeText(url);
-    showToast('Link do portal copiado!');
+    showToast('Link do Portal de Recrutamento Copiado!');
   };
 
-  // View Externa de Cadastro de Vendedor
+  // 1. TELA EXTERNA DE RECRUTAMENTO (PORTAL VENDEDOR)
   if (view === 'seller_register') {
     return (
       <Login 
@@ -177,7 +176,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Se não estiver logado e não for catálogo público, mostra Login Admin
+  // 2. SE NÃO ESTIVER LOGADO E NÃO FOR SHOWCASE, MOSTRA TELA ADM
   if (!user && !isLoading && view !== 'showcase') {
     return <Login onLoginSuccess={handleLoginSuccess} isAdminMode={true} />;
   }
@@ -192,28 +191,28 @@ const App: React.FC = () => {
           userRole={user?.role}
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Excluir venda permanentemente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Venda removida.'); }}}
+          onDelete={async (id) => { if(confirm('Remover esta venda permanentemente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Venda removida.'); }}}
           onUpdateStatus={handleUpdateStatus}
           paymentLink={paymentLinks.link1}
         />
       );
       case 'sellers': 
-        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
         return (
           <SellersManager 
             sellers={sellers}
             role={user?.role}
-            onAddSeller={async (data) => { await NeonService.registerSeller(data); await refreshSellers(); showToast('Vendedor cadastrado!'); }}
-            onUpdateSeller={async (id, data) => { await NeonService.updateSeller(id, data); await refreshSellers(); showToast('Dados salvos!'); }}
-            onDeleteSeller={async (id) => { if(confirm('Excluir este vendedor?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Vendedor removido.'); }}}
+            onAddSeller={async (data) => { await NeonService.registerSeller(data); await refreshSellers(); showToast('Vendedor adicionado!'); }}
+            onUpdateSeller={async (id, data) => { await NeonService.updateSeller(id, data); await refreshSellers(); showToast('Alterações salvas!'); }}
+            onDeleteSeller={async (id) => { if(confirm('Banir este vendedor permanentemente?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Vendedor excluído.'); }}}
           />
         );
       case 'messages': 
-        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
         return (
           <AdminMessages 
             sellers={sellers}
-            onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); showToast('Mensagem enviada!'); }}
+            onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); showToast('Alerta enviado com sucesso!'); }}
           />
         );
       case 'catalog': return (
@@ -224,8 +223,8 @@ const App: React.FC = () => {
           role={user?.role}
           onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Layout atualizado!'); }}
           onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('App publicado!'); }}
-          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('App atualizado!'); }}
-          onDeleteProduct={async (id) => { if(confirm('Remover do catálogo?')){ await NeonService.deleteProduct(id); await loadData(); showToast('App removido.'); }}}
+          onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('App editado!'); }}
+          onDeleteProduct={async (id) => { if(confirm('Remover do encarte?')){ await NeonService.deleteProduct(id); await loadData(); showToast('Produto removido.'); }}}
           onPreview={() => setView('showcase')}
         />
       );
@@ -247,21 +246,24 @@ const App: React.FC = () => {
         />
       );
       case 'settings': 
-        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} />;
+        if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
         return (
-          <div className="max-w-4xl bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black mb-2 tracking-tighter">Canais de Checkout</h2>
-            <p className="text-sm text-slate-500 mb-10 font-bold uppercase tracking-tight">Vincule os links globais para os produtos do encarte.</p>
+          <div className="max-w-4xl bg-white p-12 rounded-[48px] shadow-sm border border-slate-100 animate-in fade-in duration-500">
+            <h2 className="text-4xl font-black mb-2 tracking-tighter">Configurações Globais</h2>
+            <p className="text-sm text-slate-500 mb-12 font-bold uppercase tracking-widest opacity-60">Gerenciamento de Canais de Checkout</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
-                <div key={key} className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal de Pagamento {idx + 1}</label>
-                  <input type="text" placeholder="https://pay.exemplo.com/..." className="w-full bg-slate-50 border border-slate-200 rounded-[28px] px-8 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all shadow-inner" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
+                <div key={key} className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Link de Pagamento {idx + 1}</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-600" size={18} />
+                    <input type="text" placeholder="https://..." className="w-full bg-slate-50 border border-slate-200 rounded-3xl pl-12 pr-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
+                  </div>
                 </div>
               ))}
             </div>
-            <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Links salvos!'); }} className="mt-12 px-16 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-[0.97] transition-all flex items-center gap-4">
-              <Save size={28} /> SALVAR CONFIGURAÇÕES
+            <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }} className="mt-12 px-12 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-4">
+              <Save size={28} /> SALVAR LINKS GLOBAIS
             </button>
           </div>
         );
@@ -301,9 +303,9 @@ const App: React.FC = () => {
                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-4 bg-slate-100 rounded-[20px] active:scale-90 transition-all shadow-sm"><Menu size={28} /></button>
                 <div>
                   <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
-                    DevARO <span className="text-blue-600 font-light not-italic tracking-normal">{user?.role === 'SELLER' ? 'Consultoria' : 'Admin'}</span>
+                    DevARO <span className="text-blue-600 font-light not-italic tracking-normal">{user?.role === 'SELLER' ? 'Consultor' : 'Admin'}</span>
                   </h1>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gestão de Vendas em Nuvem</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Cloud CRM Infrastructure</p>
                 </div>
               </div>
               <div className="flex items-center gap-6">
@@ -312,8 +314,8 @@ const App: React.FC = () => {
                 {user?.role === 'ADMIN' && (
                   <button 
                     onClick={handleCopySellerLink}
-                    className="hidden md:flex items-center gap-3 px-6 py-4 bg-slate-900 text-white rounded-[20px] font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
-                    title="Link do Portal Vendedor"
+                    className="hidden md:flex items-center gap-3 px-7 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                    title="Link para recrutamento de novos consultores"
                   >
                     <LinkIcon size={18} /> Portal
                   </button>
@@ -338,8 +340,8 @@ const App: React.FC = () => {
                  <div className="w-20 h-20 border-8 border-blue-600 border-t-transparent rounded-full animate-spin shadow-2xl absolute top-0"></div>
                </div>
                <div className="text-center">
-                 <span className="text-slate-400 font-black text-[12px] uppercase tracking-[0.5em] block mb-3">Neon SQL Pipeline</span>
-                 <p className="text-slate-900 font-black text-2xl tracking-tight">Sincronizando DevARO...</p>
+                 <span className="text-slate-400 font-black text-[12px] uppercase tracking-[0.5em] block mb-3">Neon Database Sync</span>
+                 <p className="text-slate-900 font-black text-2xl tracking-tight">Carregando DevARO CRM...</p>
                </div>
             </div>
           ) : renderContent()}
