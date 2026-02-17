@@ -3,7 +3,7 @@
   "name": "DevARO - Gestão de Apps",
   "short_name": "DevARO",
   "description": "CRM para gerenciamento de assinaturas de aplicativos DevARO.",
-  "start_url": "index.html",
+  "start_url": ".",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
