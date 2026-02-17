@@ -3,12 +3,12 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
-// Registro do Service Worker para PWA
+// Registro do Service Worker para PWA (Caminho relativo para evitar 404)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.log('ServiceWorker registration failed: ', err);
-    });
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW Registered'))
+      .catch(err => console.log('SW registration failed: ', err));
   });
 }
 
@@ -28,7 +28,7 @@ if (container) {
       <div style="padding: 20px; color: red; font-family: sans-serif; text-align: center;">
         <h1>Erro Crítico DevARO</h1>
         <p>${error instanceof Error ? error.message : 'Erro desconhecido'}</p>
-        <button onclick="location.reload()" style="padding: 10px 20px; border-radius: 8px; border: none; bg: #2563eb; color: white; cursor: pointer;">Recarregar</button>
+        <button onclick="location.reload()" style="padding: 10px 20px; border-radius: 8px; border: none; background: #2563eb; color: white; cursor: pointer;">Recarregar</button>
       </div>
     `;
   }
