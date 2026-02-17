@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Info, Calendar, UserCheck, X, AlertCircle } from 'lucide-react';
+import { Bell, Info, Calendar, UserCheck, X, AlertCircle, Trash2 } from 'lucide-react';
 import { AppMessage, Client, ClientStatus } from '../types';
+import { NeonService } from '../db';
 
 interface NotificationBellProps {
   messages: AppMessage[];
   clients: Client[];
+  onMessageDeleted: () => void;
 }
 
-const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }) => {
+const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, onMessageDeleted }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -32,12 +34,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
     // Mensagens do Admin
     const adminMsgs = messages.map(m => ({
       id: `msg-${m.id}`,
+      realId: m.id,
       type: m.receiver_email ? 'private' : 'general',
       title: m.receiver_email ? 'Mensagem Privada' : 'Aviso Geral DevARO',
       content: m.content,
       sender: m.sender_name,
       icon: m.receiver_email ? UserCheck : Info,
-      date: m.created_at
+      date: m.created_at,
+      deletable: true
     }));
 
     const allNotifications = [...overdueClients, ...adminMsgs].sort((a, b) => 
@@ -46,6 +50,16 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
 
     setNotifications(allNotifications);
   }, [messages, clients]);
+
+  const handleDeleteMessage = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      await NeonService.deleteMessage(id);
+      onMessageDeleted();
+    } catch (err) {
+      console.error('Erro ao excluir mensagem:', err);
+    }
+  };
 
   return (
     <div className="relative">
@@ -76,12 +90,22 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
               {notifications.map((notif) => {
                 const Icon = notif.icon;
                 return (
-                  <div key={notif.id} className={`p-4 rounded-3xl flex gap-4 transition-all ${notif.type === 'warning' ? 'bg-amber-50 border border-amber-100' : 'bg-blue-50/20 border border-blue-50 hover:bg-blue-50/40'}`}>
+                  <div key={notif.id} className={`p-4 rounded-3xl flex gap-4 transition-all relative group ${notif.type === 'warning' ? 'bg-amber-50 border border-amber-100' : 'bg-blue-50/20 border border-blue-50 hover:bg-blue-50/40'}`}>
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${notif.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
                       <Icon size={24} />
                     </div>
-                    <div>
-                      <h4 className="font-black text-slate-900 text-sm mb-1">{notif.title}</h4>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-black text-slate-900 text-sm mb-1">{notif.title}</h4>
+                        {notif.deletable && (
+                           <button 
+                            onClick={(e) => handleDeleteMessage(e, notif.realId)}
+                            className="p-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                           >
+                             <Trash2 size={14} />
+                           </button>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-600 leading-relaxed font-medium">{notif.content}</p>
                       {notif.sender && <p className="text-[9px] font-black text-blue-600 uppercase mt-2 tracking-widest">Enviado por: Administrador</p>}
                     </div>

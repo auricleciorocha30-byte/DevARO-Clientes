@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar } from 'lucide-react';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin } from 'lucide-react';
 import { Client, ClientStatus, GlobalPaymentLinks, Seller } from '../types';
 
 interface ClientModalProps {
@@ -37,7 +37,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         name: (initialData as any).name || prev.name,
         email: (initialData as any).email || prev.email,
         whatsapp: (initialData as any).whatsapp || prev.whatsapp,
-        address: (initialData as any).address || prev.address,
+        address: (initialData as any).address || prev.address || '',
         appName: initialData.appName || prev.appName,
         monthlyValue: Number(initialData.monthlyValue) || prev.monthlyValue,
         dueDay: (initialData as any).dueDay || prev.dueDay || 10,
@@ -148,6 +148,20 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
               </div>
             </div>
 
+            {/* ENDEREÇO FIELD - SOLICITADO */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <MapPin size={12} /> Endereço Completo
+              </label>
+              <input
+                type="text"
+                placeholder="Rua, Número, Bairro, Cidade - UF"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-bold text-slate-900"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+              />
+            </div>
+
             <div className="p-5 bg-slate-50 border border-slate-100 rounded-[24px] space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck size={18} className="text-blue-600" />
@@ -182,7 +196,6 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 </div>
               </div>
 
-              {/* DUA DAY FIELD - dia do vencimento */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Calendar size={12} /> Dia do Vencimento (1-31)

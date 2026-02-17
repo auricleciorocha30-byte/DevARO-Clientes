@@ -73,6 +73,7 @@ export const initDatabase = async () => {
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS address TEXT;`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`
     ];
@@ -159,6 +160,10 @@ export const NeonService = {
 
   async addMessage(content: string, receiverEmail: string | null, senderName: string) {
     return await sql('INSERT INTO messages (content, receiver_email, sender_name) VALUES ($1, $2, $3) RETURNING *', [content, receiverEmail, senderName]);
+  },
+
+  async deleteMessage(id: string) {
+    return await sql('DELETE FROM messages WHERE id=$1', [id]);
   },
 
   async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },

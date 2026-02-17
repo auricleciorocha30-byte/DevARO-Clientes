@@ -13,7 +13,7 @@ import SellersManager from './components/SellersManager';
 import AdminMessages from './components/AdminMessages';
 import NotificationBell from './components/NotificationBell';
 import Login from './components/Login';
-import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage } from './types';
+import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage, SellerPermissions } from './types';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   
   const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({ link1: '', link2: '', link3: '', link4: '' });
   const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>({ address: '', whatsapp: '', companyName: 'DevARO Apps' });
+  const [sellerPermissions, setSellerPermissions] = useState<SellerPermissions>({ canDeleteClients: false });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -68,10 +69,11 @@ const App: React.FC = () => {
 
     try {
       await initDatabase(); 
-      const [dbProducts, dbLinks, dbCatalog] = await Promise.all([
+      const [dbProducts, dbLinks, dbCatalog, dbPermissions] = await Promise.all([
         NeonService.getProducts(),
         NeonService.getSettings('payment_links'),
-        NeonService.getSettings('catalog_config')
+        NeonService.getSettings('catalog_config'),
+        NeonService.getSettings('seller_permissions')
       ]);
 
       if (dbProducts) {
@@ -86,12 +88,12 @@ const App: React.FC = () => {
 
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
+      if (dbPermissions) setSellerPermissions(dbPermissions);
 
       if (user) {
         await refreshClients();
         await refreshSellers(); 
-        const msgs = await NeonService.getMessages(user.email);
-        setMessages(msgs as AppMessage[]);
+        await refreshMessages();
       }
     } catch (err) {
       console.error('Falha Neon:', err);
@@ -103,7 +105,6 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
-    // Vendedor vê apenas seus clientes
     const sellerId = user?.role === 'SELLER' ? user.id : undefined;
     const dbClients = await NeonService.getClients(sellerId);
     const mapped = (dbClients as any[]).map(c => ({
@@ -112,6 +113,7 @@ const App: React.FC = () => {
       monthlyValue: Number(c.monthlyvalue || 0),
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
+      address: c.address || '',
       seller_id: c.seller_id,
       createdAt: c.created_at || new Date().toISOString()
     }));
@@ -123,6 +125,12 @@ const App: React.FC = () => {
     setSellers(dbSellers as Seller[]);
   };
 
+  const refreshMessages = async () => {
+    if (!user) return;
+    const msgs = await NeonService.getMessages(user.email);
+    setMessages(msgs as AppMessage[]);
+  };
+
   const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     localStorage.setItem('devaro_session', JSON.stringify(userData));
@@ -131,7 +139,6 @@ const App: React.FC = () => {
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
-      // Vincula ao vendedor logado se não for admin
       const finalSellerId = user?.role === 'SELLER' ? user.id : (clientData.seller_id || null);
       const dataToSave = { ...clientData, seller_id: finalSellerId };
       
@@ -183,6 +190,7 @@ const App: React.FC = () => {
           clients={clients} 
           sellers={sellers}
           userRole={user?.role}
+          sellerPermissions={sellerPermissions}
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
           onDelete={async (id) => { if(confirm('Remover esta venda?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Venda removida.'); }}}
@@ -206,7 +214,7 @@ const App: React.FC = () => {
         return (
           <AdminMessages 
             sellers={sellers}
-            onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); showToast('Alerta enviado!'); }}
+            onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); await refreshMessages(); showToast('Alerta enviado!'); }}
           />
         );
       case 'catalog': return (
@@ -242,19 +250,51 @@ const App: React.FC = () => {
       case 'settings': 
         if (user?.role !== 'ADMIN') return <Dashboard clients={clients} userRole={user?.role} />;
         return (
-          <div className="max-w-4xl bg-white p-12 rounded-[48px] shadow-sm border border-slate-100 animate-in fade-in duration-500">
-            <h2 className="text-4xl font-black mb-2 tracking-tighter">Canais de Checkout</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-              {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
-                <div key={key} className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Link Global {idx + 1}</label>
-                  <input type="text" placeholder="https://..." className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
-                </div>
-              ))}
+          <div className="max-w-4xl space-y-8 animate-in fade-in duration-500 pb-20">
+            <div className="bg-white p-12 rounded-[48px] shadow-sm border border-slate-100">
+              <h2 className="text-4xl font-black mb-2 tracking-tighter">Canais de Checkout</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
+                  <div key={key} className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Link Global {idx + 1}</label>
+                    <input type="text" placeholder="https://..." className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
+                  </div>
+                ))}
+              </div>
+              <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }} className="mt-12 px-12 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-4">
+                <Save size={28} /> SALVAR LINKS
+              </button>
             </div>
-            <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }} className="mt-12 px-12 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-4">
-              <Save size={28} /> SALVAR LINKS
-            </button>
+
+            <div className="bg-white p-12 rounded-[48px] shadow-sm border border-slate-100">
+              <h2 className="text-4xl font-black mb-2 tracking-tighter">Administração</h2>
+              <p className="text-slate-500 font-medium mb-8">Gerencie permissões globais da equipe de consultoria.</p>
+              
+              <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[32px] border border-slate-100">
+                <div className="flex items-center gap-6">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${sellerPermissions.canDeleteClients ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                    <Database size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900">Exclusão de Vendas</h4>
+                    <p className="text-sm text-slate-500 font-medium">Permitir que vendedores apaguem registros de clientes.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSellerPermissions(prev => ({ ...prev, canDeleteClients: !prev.canDeleteClients }))}
+                  className={`w-20 h-10 rounded-full transition-all flex items-center px-1.5 ${sellerPermissions.canDeleteClients ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                >
+                  <div className={`w-7 h-7 bg-white rounded-full shadow-lg transform transition-transform ${sellerPermissions.canDeleteClients ? 'translate-x-10' : ''}`} />
+                </button>
+              </div>
+
+              <button 
+                onClick={async () => { await NeonService.setSettings('seller_permissions', sellerPermissions); showToast('Permissões atualizadas!'); }} 
+                className="mt-12 px-12 py-6 bg-slate-900 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-slate-900/40 hover:bg-slate-800 active:scale-95 transition-all flex items-center gap-4"
+              >
+                <Database size={28} /> SALVAR PERMISSÕES
+              </button>
+            </div>
           </div>
         );
       default: return <Dashboard clients={clients} sellers={sellers} userRole={user?.role} />;
@@ -295,7 +335,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-6">
-                <NotificationBell messages={messages} clients={clients} />
+                <NotificationBell messages={messages} clients={clients} onMessageDeleted={refreshMessages} />
                 {user?.role === 'ADMIN' && (
                   <button onClick={handleCopySellerLink} className="hidden md:flex items-center gap-3 px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all">
                     <LinkIcon size={18} /> Portal

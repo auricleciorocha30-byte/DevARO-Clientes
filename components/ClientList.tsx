@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Search, Plus, MessageCircle, Trash2, Users, ChevronDown, Edit2, Loader2, MessageSquare, UserCircle } from 'lucide-react';
-import { Client, ClientStatus, Seller } from '../types';
+import { Search, Plus, MessageCircle, Trash2, Users, ChevronDown, Edit2, Loader2, MessageSquare, UserCircle, MapPinned } from 'lucide-react';
+import { Client, ClientStatus, Seller, SellerPermissions } from '../types';
 import { generatePersonalizedMessage } from '../services/geminiService';
 
 interface ClientListProps {
@@ -13,10 +13,12 @@ interface ClientListProps {
   onUpdateStatus: (id: string, status: ClientStatus) => Promise<void>;
   paymentLink: string;
   userRole?: string;
+  sellerPermissions: SellerPermissions;
 }
 
-const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, onEdit, onDelete, onUpdateStatus, userRole }) => {
+const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, onEdit, onDelete, onUpdateStatus, userRole, sellerPermissions }) => {
   const isAdmin = userRole === 'ADMIN';
+  const canDelete = isAdmin || sellerPermissions.canDeleteClients;
   const [searchTerm, setSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
@@ -46,6 +48,15 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
     } finally {
       setUpdatingStatusId(null);
     }
+  };
+
+  const handleOpenMap = (address: string) => {
+    if (!address) {
+      alert('Endereço não informado para este cliente.');
+      return;
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.open(url, '_blank');
   };
 
   const statusConfig = {
@@ -139,6 +150,14 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
 
               <div className="flex items-center gap-2">
                 <button 
+                  onClick={() => handleOpenMap(client.address)} 
+                  className="p-3 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100"
+                  title="Ver Rota no Mapa"
+                >
+                  <MapPinned size={20} />
+                </button>
+
+                <button 
                   onClick={() => onEdit(client)} 
                   className="p-3 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition-colors border border-slate-100"
                   title="Editar Dados"
@@ -155,13 +174,15 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
                   {isGenerating === client.id ? <Loader2 size={20} className="animate-spin" /> : <MessageSquare size={20} />}
                 </button>
 
-                <button 
-                  onClick={() => onDelete(client.id)} 
-                  className="p-3 bg-slate-50 text-slate-300 rounded-2xl hover:text-red-500 hover:bg-red-50 transition-all border border-slate-100"
-                  title="Excluir Registro"
-                >
-                  <Trash2 size={20} />
-                </button>
+                {canDelete && (
+                  <button 
+                    onClick={() => onDelete(client.id)} 
+                    className="p-3 bg-slate-50 text-slate-300 rounded-2xl hover:text-red-500 hover:bg-red-50 transition-all border border-slate-100"
+                    title="Excluir Registro"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

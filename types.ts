@@ -75,4 +75,8 @@ export interface GlobalPaymentLinks {
   link4: string;
 }
 
+export interface SellerPermissions {
+  canDeleteClients: boolean;
+}
+
 export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages';
