@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NeonService } from '../db';
-import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, Code2, UserPlus, User, MapPin, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, Code2, UserPlus, User, MapPin, CheckCircle2 } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (userData: any) => void;
@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               Aguarde ser aprovado
             </p>
             <p className="text-slate-400 text-xs font-medium">
-              Sua solicitação de colaborador DevARO está em análise.
+              Seu cadastro como colaborador DevARO foi recebido. Em breve você terá acesso ao painel.
             </p>
           </div>
           <button 
@@ -72,7 +72,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
     );
   }
 
-  // TELA LOGIN ADMINISTRATIVO (SIMPLES E SEPARADA)
   if (isAdminMode) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 font-sans relative overflow-hidden">
@@ -83,14 +82,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               <Code2 size={32} className="text-white" />
             </div>
             <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">DevARO <span className="text-blue-500 not-italic font-light">ADM</span></h1>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Management Console</p>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Painel de Controle</p>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-white p-10 rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] space-y-6">
             {error && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-[11px] font-bold border border-red-100 flex items-center gap-2 animate-shake"><AlertCircle size={16} /> {error}</div>}
             
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail Administrativo</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                 <input required type="email" placeholder="admin@devaro.com" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
@@ -98,7 +97,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha de Acesso</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                 <input required type="password" placeholder="••••••••" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
@@ -112,21 +111,19 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
             <div className="flex flex-col gap-3 items-center pt-2">
               <button type="button" className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors tracking-widest">Esqueceu a senha?</button>
               <div className="h-px w-8 bg-slate-100"></div>
-              <button type="button" className="text-[10px] font-black text-blue-600 uppercase hover:underline tracking-widest">Cadastrar-se como Admin</button>
+              <button type="button" className="text-[10px] font-black text-blue-600 uppercase hover:underline tracking-widest">Cadastrar-se</button>
             </div>
           </form>
           
-          <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest opacity-40">DevARO Secure Infrastructure v2.0</p>
+          <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest opacity-40">DevARO Cloud Infrastructure</p>
         </div>
       </div>
     );
   }
 
-  // TELA PORTAL DO VENDEDOR (ESTILO CARD COM ABAS - CONFORME IMAGEM)
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 relative overflow-hidden font-sans">
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       
       <div className="w-full max-w-md bg-white rounded-[40px] shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in duration-500 border border-slate-100">
         <div className="p-10 pt-12 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative">
@@ -141,7 +138,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
           </p>
         </div>
 
-        {/* Abas solicitadas: "Já é nosso colaborador?" e "Cadastre-se" */}
         <div className="flex border-b border-slate-100 bg-slate-50/50">
           <button 
             type="button"
@@ -172,21 +168,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type="text" placeholder="Nome Sobrenome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={name} onChange={e => setName(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail para Cadastro</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type="email" placeholder="vendedor@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Crie uma Senha</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -194,9 +190,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço / Localização</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço</label>
                 <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type="text" placeholder="Cidade - UF" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
               </div>
@@ -206,14 +202,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
                <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type="email" placeholder="seu@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
                   <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -226,8 +222,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
           <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-3">
             {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'FINALIZAR CADASTRO' : 'ENTRAR NO PAINEL')}
           </button>
-          
-          <p className="text-center text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">DevARO CRM Cloud Infrastructure</p>
         </form>
       </div>
     </div>
