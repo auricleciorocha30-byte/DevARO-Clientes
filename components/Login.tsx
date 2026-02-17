@@ -59,10 +59,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
              <UserPlus size={40} />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Solicitação Enviada!</h2>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Cadastro Enviado!</h2>
           <p className="text-slate-500 font-medium leading-relaxed">
-            Seu cadastro como consultor DevARO foi recebido. <br/>
-            <span className="text-blue-600 font-black uppercase text-lg">Aguarde ser aprovado</span> pelo administrador para acessar o seu painel de vendas.
+            Seu cadastro como consultor DevARO foi recebido com sucesso. <br/>
+            <span className="text-blue-600 font-black uppercase text-lg">Aguarde ser aprovado</span> para ter acesso ao painel de vendas.
           </p>
           <button onClick={() => { setIsRegistering(false); setSuccess(false); }} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-all">VOLTAR PARA LOGIN</button>
         </div>
@@ -72,6 +72,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]"></div>
 
@@ -84,10 +85,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
             DevARO <span className="font-light not-italic tracking-normal opacity-80">CRM</span>
           </h1>
           <p className="text-blue-100 mt-2 font-bold uppercase text-[10px] tracking-widest opacity-70">
-            {isRegistering ? 'Venha crescer com a gente' : 'Gestão e Automação de Vendas'}
+            {isRegistering ? 'Torne-se nosso colaborador' : 'Acesse seu painel de vendas'}
           </p>
         </div>
 
+        {/* Tabs */}
         <div className="flex border-b border-slate-100">
           <button 
             onClick={() => setIsRegistering(false)} 
@@ -117,21 +119,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input required type="text" placeholder="Seu nome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={name} onChange={e => setName(e.target.value)} />
+                  <input required type="text" placeholder="Nome Sobrenome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={name} onChange={e => setName(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Cidade/UF)</label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input required type="text" placeholder="Sua localização" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={address} onChange={e => setAddress(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail para Cadastro</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail (Usuário)</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input required type="email" placeholder="email@exemplo.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={email} onChange={e => setEmail(e.target.value)} />
+                  <input required type="email" placeholder="vendedor@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -142,6 +137,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço / Cidade</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                  <input required type="text" placeholder="Ex: São Paulo - SP" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
               </div>
             </div>
