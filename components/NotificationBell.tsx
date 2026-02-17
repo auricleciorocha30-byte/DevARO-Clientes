@@ -83,7 +83,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
                     <div>
                       <h4 className="font-black text-slate-900 text-sm mb-1">{notif.title}</h4>
                       <p className="text-xs text-slate-600 leading-relaxed font-medium">{notif.content}</p>
-                      {notif.sender && <p className="text-[9px] font-black text-blue-600 uppercase mt-2 tracking-widest">Enviado por: {notif.sender}</p>}
+                      {notif.sender && <p className="text-[9px] font-black text-blue-600 uppercase mt-2 tracking-widest">Enviado por: Administrador</p>}
                     </div>
                   </div>
                 );
