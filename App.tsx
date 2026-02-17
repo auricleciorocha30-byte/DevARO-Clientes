@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Check, Save, Database, Bell, Send } from 'lucide-react';
+import { Menu, Check, Save, Database, Bell, Send, Link as LinkIcon } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -161,12 +161,17 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCopySellerLink = () => {
+    const url = window.location.origin + window.location.pathname + '?portal=seller';
+    navigator.clipboard.writeText(url);
+    showToast('Link de cadastro copiado!');
+  };
+
   if (view === 'seller_register') {
     return (
       <Login 
         onLoginSuccess={handleLoginSuccess} 
         isSellerRegistration={true} 
-        onBack={() => setView('dashboard')}
       />
     );
   }
@@ -237,12 +242,13 @@ const App: React.FC = () => {
       );
       case 'settings': return (
         <div className="max-w-3xl bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-          <h2 className="text-2xl font-black mb-8 tracking-tight">Canais Globais</h2>
+          <h2 className="text-2xl font-black mb-4 tracking-tight">Canais Globais</h2>
+          <p className="text-sm text-slate-500 mb-8 font-medium">Configure os checkouts padrão para os produtos do catálogo.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
               <div key={key} className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal {idx + 1}</label>
-                <input type="text" placeholder="Cole o link..." className="w-full bg-slate-50 border border-slate-200 rounded-[24px] px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Checkout Canal {idx + 1}</label>
+                <input type="text" placeholder="Cole o link..." className="w-full bg-slate-50 border border-slate-200 rounded-[24px] px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-600 outline-none transition-all shadow-inner" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
               </div>
             ))}
           </div>
@@ -288,12 +294,22 @@ const App: React.FC = () => {
               <div className="flex items-center gap-4">
                 {user?.role === 'SELLER' && <NotificationBell messages={messages} clients={clients} />}
                 {user?.role === 'ADMIN' && (
-                   <button 
-                    onClick={() => setView('messages')}
-                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm"
-                   >
-                     <Send size={24} />
-                   </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handleCopySellerLink}
+                      className="p-3 bg-slate-100 border border-slate-200 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-sm flex items-center gap-2 font-black text-[10px] uppercase"
+                      title="Copiar Link de Recrutamento"
+                    >
+                      <LinkIcon size={18} /> Portal
+                    </button>
+                    <button 
+                      onClick={() => setView('messages')}
+                      className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm"
+                      title="Comunicados"
+                    >
+                      <Send size={24} />
+                    </button>
+                  </div>
                 )}
                 <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-blue-50 border border-blue-100 rounded-2xl">
                   <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>

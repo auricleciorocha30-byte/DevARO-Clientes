@@ -16,14 +16,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
     const today = new Date();
     const currentDay = today.getDate();
     
+    // Filtra vencimentos: Apenas clientes ATIVOS/TESTE que vencem hoje ou estão atrasados
     const overdueClients = clients.filter(c => 
       c.status !== ClientStatus.PAUSED && 
       (c.dueDay === currentDay || c.status === ClientStatus.LATE)
     ).map(c => ({
       id: `client-${c.id}`,
       type: 'warning',
-      title: 'Vencimento Hoje',
-      content: `O cliente ${c.name} tem um vencimento hoje no valor de R$ ${c.monthlyValue.toFixed(2)}.`,
+      title: c.dueDay === currentDay ? 'Vencimento Hoje' : 'Cliente Atrasado',
+      content: `O cliente ${c.name} (${c.appName}) tem um valor de R$ ${c.monthlyValue.toFixed(2)} pendente.`,
       icon: Calendar,
       date: new Date().toISOString()
     }));
@@ -31,7 +32,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
     const appMsgs = messages.map(m => ({
       id: `msg-${m.id}`,
       type: m.receiver_email ? 'private' : 'general',
-      title: m.receiver_email ? 'Mensagem Direta' : 'Aviso Geral',
+      title: m.receiver_email ? 'Mensagem Direta' : 'Comunicado DevARO',
       content: m.content,
       sender: m.sender_name,
       icon: m.receiver_email ? UserCheck : Info,
@@ -49,7 +50,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
       >
         <Bell size={24} />
         {notifications.length > 0 && (
-          <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] text-white font-bold">
+          <span className="absolute top-2 right-2 w-5 h-5 bg-red-600 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-black">
             {notifications.length}
           </span>
         )}
@@ -58,33 +59,36 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[190]" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-4 w-80 sm:w-96 bg-white border border-slate-100 rounded-[32px] shadow-2xl z-[200] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="absolute right-0 mt-4 w-80 sm:w-[400px] bg-white border border-slate-100 rounded-[32px] shadow-2xl z-[200] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-black text-slate-900 tracking-tight flex items-center gap-2">
-                Central de Alertas <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full">{notifications.length}</span>
-              </h3>
+              <div>
+                <h3 className="font-black text-slate-900 tracking-tight">Central de Alertas</h3>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Avisos e Vencimentos</p>
+              </div>
               <button onClick={() => setIsOpen(false)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-full transition-all"><X size={18} /></button>
             </div>
-            <div className="max-h-[450px] overflow-y-auto p-2">
+            <div className="max-h-[450px] overflow-y-auto p-4 space-y-3">
               {notifications.map((notif) => {
                 const Icon = notif.icon;
                 return (
-                  <div key={notif.id} className={`p-4 rounded-2xl mb-2 flex gap-4 transition-all hover:scale-[1.01] ${notif.type === 'warning' ? 'bg-amber-50 border border-amber-100' : 'bg-white border border-slate-50 hover:bg-slate-50'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${notif.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-                      <Icon size={20} />
+                  <div key={notif.id} className={`p-4 rounded-3xl flex gap-4 transition-all ${notif.type === 'warning' ? 'bg-amber-50 border border-amber-100' : 'bg-blue-50/20 border border-blue-50 hover:bg-blue-50/40'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${notif.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                      <Icon size={24} />
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm leading-none mb-1">{notif.title}</h4>
-                      <p className="text-xs text-slate-600 leading-relaxed">{notif.content}</p>
-                      {notif.sender && <p className="text-[9px] font-black text-blue-600 uppercase mt-2">De: {notif.sender}</p>}
+                      <h4 className="font-black text-slate-900 text-sm mb-1">{notif.title}</h4>
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium">{notif.content}</p>
+                      {notif.sender && <p className="text-[9px] font-black text-blue-600 uppercase mt-2 tracking-widest">Enviado por: {notif.sender}</p>}
                     </div>
                   </div>
                 );
               })}
               {notifications.length === 0 && (
-                <div className="py-12 text-center">
-                  <Bell size={48} className="mx-auto text-slate-100 mb-4" />
-                  <p className="text-slate-400 font-bold text-sm">Sem alertas no momento.</p>
+                <div className="py-16 text-center">
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Bell size={40} className="text-slate-200" />
+                  </div>
+                  <p className="text-slate-400 font-bold text-sm">Nenhum alerta pendente.</p>
                 </div>
               )}
             </div>
