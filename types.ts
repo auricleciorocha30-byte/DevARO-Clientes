@@ -1,8 +1,25 @@
+
 export enum ClientStatus {
   ACTIVE = 'ACTIVE',
   LATE = 'LATE',
   PAUSED = 'PAUSED',
   TESTING = 'TESTING'
+}
+
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  SELLER = 'SELLER'
+}
+
+export interface Seller {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  address: string;
+  approved: boolean;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface Client {
@@ -15,8 +32,8 @@ export interface Client {
   monthlyValue: number;
   dueDay: number;
   status: ClientStatus;
-  lastPaymentDate?: string;
-  paymentLink: string; // Link específico deste cliente
+  paymentLink: string;
+  seller_id?: string; // ID do vendedor que realizou a venda
   createdAt: string;
 }
 
@@ -31,9 +48,9 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  photo: string; // Base64
+  photo: string;
   paymentMethods: PaymentMethod[];
-  paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4'; // Identificador do link global usado
+  paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4';
   externalLink?: string; 
 }
 
@@ -50,4 +67,4 @@ export interface GlobalPaymentLinks {
   link4: string;
 }
 
-export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings';
+export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register';

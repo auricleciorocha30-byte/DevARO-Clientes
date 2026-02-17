@@ -12,6 +12,7 @@ interface CatalogAdminProps {
   onUpdateProduct: (id: string, product: Omit<Product, 'id'>) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
   onPreview: () => void;
+  role?: 'ADMIN' | 'SELLER';
 }
 
 const CatalogAdmin: React.FC<CatalogAdminProps> = ({ 
@@ -22,8 +23,10 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
-  onPreview
+  onPreview,
+  role
 }) => {
+  const isAdmin = role === 'ADMIN';
   const [localConfig, setLocalConfig] = useState(config);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -50,6 +53,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   };
 
   const handleEditClick = (product: Product) => {
+    if (!isAdmin) return;
     setEditingProductId(product.id);
     setNewProduct({
       name: product.name,
@@ -80,6 +84,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) return;
     setIsSaving(true);
     try {
       if (editingProductId) {
@@ -98,12 +103,14 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
 
   return (
     <div className="space-y-8 pb-20">
-      {/* Configurações do Encarte */}
+      {/* Configurações do Encarte - Apenas Admin pode ver os inputs de edição */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Configuração do Encarte</h2>
-            <p className="text-xs text-slate-500 mt-1">Personalize como os clientes verão seus produtos.</p>
+            <h2 className="text-xl font-bold text-slate-900">{isAdmin ? 'Configuração do Encarte' : 'Catálogo de Apps'}</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              {isAdmin ? 'Personalize como os clientes verão seus produtos.' : 'Visualize e copie links para enviar aos clientes.'}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
              <button onClick={() => {
@@ -112,36 +119,41 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
              }} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
-              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiado!' : 'Copiar Link'}
+              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Link Copiado!' : 'Copiar Link Encarte'}
             </button>
             <button onClick={onPreview} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold border border-blue-100 active:scale-95">
               <ExternalLink size={16} /> Ver Online
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
-            <input type="text" placeholder="Ex: DevARO Apps" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
-            <input type="text" placeholder="Cidade - Estado" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
-          </div>
-        </div>
-        <button onClick={() => onSaveConfig(localConfig)} className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all shadow-lg shadow-blue-600/20">
-          Salvar Identidade
-        </button>
+
+        {isAdmin && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
+                <input type="text" placeholder="Ex: DevARO Apps" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
+                <input type="text" placeholder="Cidade - Estado" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
+              </div>
+            </div>
+            <button onClick={() => onSaveConfig(localConfig)} className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all shadow-lg shadow-blue-600/20">
+              Salvar Identidade
+            </button>
+          </>
+        )}
       </div>
 
       {/* Meus Produtos */}
       <div>
         <div className="flex items-center justify-between mb-6 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Meus Produtos</h2>
-          {!showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl active:scale-95 shadow-md"><Plus size={18} /> Novo</button>}
+          <h2 className="text-xl font-bold text-slate-900">Apps Disponíveis</h2>
+          {isAdmin && !showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl active:scale-95 shadow-md"><Plus size={18} /> Novo</button>}
         </div>
 
-        {showProductForm && (
+        {isAdmin && showProductForm && (
           <div className="mb-8 bg-white p-6 rounded-2xl shadow-xl border-2 border-blue-100 animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold">{editingProductId ? 'Editar Produto' : 'Novo Produto'}</h3>
@@ -160,7 +172,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3">Vincular Link de Pagamento</label>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3">Vincular Link de Pagamento Global</label>
                     <div className="grid grid-cols-2 gap-2">
                       {(['link1', 'link2', 'link3', 'link4'] as const).map((id, idx) => (
                         <button
@@ -215,31 +227,44 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     <ShoppingBag size={48} />
                   </div>
                 )}
-                <div className="absolute top-3 right-3 flex gap-2">
-                  <button onClick={() => handleEditClick(product)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={16} /></button>
-                  <button onClick={() => onDeleteProduct(product.id)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={16} /></button>
-                </div>
+                {isAdmin && (
+                  <div className="absolute top-3 right-3 flex gap-2">
+                    <button onClick={() => handleEditClick(product)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={16} /></button>
+                    <button onClick={() => onDeleteProduct(product.id)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={16} /></button>
+                  </div>
+                )}
               </div>
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-bold text-slate-900 line-clamp-1">{product.name}</h4>
                   <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">
-                    Link {(product.paymentLinkId || 'link1').replace('link', '')}
+                    Checkout {(product.paymentLinkId || 'link1').replace('link', '')}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 line-clamp-2 mb-4 min-h-[32px]">{product.description}</p>
+                
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-bold text-slate-400 uppercase">Mensalidade</span>
                     <span className="text-blue-600 font-black text-lg">R$ {product.price.toFixed(2)}</span>
                   </div>
-                  <ShoppingBag className="text-slate-100" size={24} />
+                  <button 
+                    onClick={() => {
+                      const link = globalLinks[product.paymentLinkId as keyof GlobalPaymentLinks] || '';
+                      navigator.clipboard.writeText(link);
+                      alert('Link do checkout copiado para o seu WhatsApp!');
+                    }}
+                    className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
+                    title="Copiar link de pagamento deste produto"
+                  >
+                    <Copy size={18} />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
           
-          {products.length === 0 && !showProductForm && (
+          {products.length === 0 && !showProductForm && isAdmin && (
             <button onClick={() => setShowProductForm(true)} className="aspect-[4/3] rounded-[24px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all group">
                <Plus className="group-hover:scale-110 transition-transform" size={32} />
                <span className="font-bold">Adicionar Primeiro Item</span>

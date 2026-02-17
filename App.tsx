@@ -8,8 +8,9 @@ import ClientList from './components/ClientList';
 import ClientModal from './components/ClientModal';
 import CatalogAdmin from './components/CatalogAdmin';
 import CatalogShowcase from './components/CatalogShowcase';
+import SellersManager from './components/SellersManager';
 import Login from './components/Login';
-import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks } from './types';
+import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole } from './types';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -24,14 +25,13 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notification, setNotification] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
   
-  const [clients, setClients] = useState<Client[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({
-    link1: '', link2: '', link3: '', link4: ''
-  });
-  const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>({
-    address: '', whatsapp: '', companyName: 'DevARO Apps'
-  });
+  // ESTADOS COM CACHE
+  const [clients, setClients] = useState<Client[]>(() => JSON.parse(localStorage.getItem('cache_clients') || '[]'));
+  const [products, setProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('cache_products') || '[]'));
+  const [sellers, setSellers] = useState<Seller[]>(() => JSON.parse(localStorage.getItem('cache_sellers') || '[]'));
+  
+  const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({ link1: '', link2: '', link3: '', link4: '' });
+  const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>({ address: '', whatsapp: '', companyName: 'DevARO Apps' });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -39,9 +39,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('devaro_session');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
   useEffect(() => {
@@ -60,7 +58,11 @@ const App: React.FC = () => {
   };
 
   const loadData = async () => {
-    setIsLoading(true);
+    if (view === 'seller_register') {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await initDatabase(); 
       const [dbProducts, dbLinks, dbCatalog] = await Promise.all([
@@ -70,18 +72,23 @@ const App: React.FC = () => {
       ]);
 
       if (dbProducts) {
-        setProducts((dbProducts as any[]).map(p => ({
+        const mapped = (dbProducts as any[]).map(p => ({
           ...p, price: Number(p.price),
           paymentMethods: p.payment_methods || [],
           paymentLinkId: p.payment_link_id,
           externalLink: p.external_link
-        })));
+        }));
+        setProducts(mapped);
+        localStorage.setItem('cache_products', JSON.stringify(mapped));
       }
 
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
 
-      await refreshClients();
+      if (user) {
+        await refreshClients();
+        if (user.role === 'ADMIN') await refreshSellers();
+      }
     } catch (err) {
       console.error('Falha Neon:', err);
     } finally {
@@ -92,75 +99,71 @@ const App: React.FC = () => {
   useEffect(() => { loadData(); }, [user, view]);
 
   const refreshClients = async () => {
-    const dbClients = await NeonService.getClients();
-    
-    // MAPEAMENTO CRÍTICO: Neon retorna colunas minúsculas (appname, monthlyvalue, etc)
+    const sellerId = user?.role === 'SELLER' ? user.id : undefined;
+    const dbClients = await NeonService.getClients(sellerId);
     const mapped = (dbClients as any[]).map(c => ({
       ...c,
       appName: c.appname || 'App Indefinido',
       monthlyValue: Number(c.monthlyvalue || 0),
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
+      seller_id: c.seller_id,
       createdAt: c.created_at || new Date().toISOString()
     }));
-    
     setClients(mapped);
+    localStorage.setItem('cache_clients', JSON.stringify(mapped));
+  };
+
+  const refreshSellers = async () => {
+    const dbSellers = await NeonService.getSellers();
+    setSellers(dbSellers as Seller[]);
+    localStorage.setItem('cache_sellers', JSON.stringify(dbSellers));
   };
 
   const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     localStorage.setItem('devaro_session', JSON.stringify(userData));
+    setView('dashboard');
   };
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
+      const dataWithSeller = { ...clientData, seller_id: user?.role === 'SELLER' ? user.id : clientData.seller_id };
       if (editingClient) {
-        await NeonService.updateClient(editingClient.id, clientData);
+        await NeonService.updateClient(editingClient.id, dataWithSeller);
         showToast('Dados Atualizados!');
       } else {
-        await NeonService.addClient(clientData);
-        showToast('Cliente Gravado!');
+        await NeonService.addClient(dataWithSeller);
+        showToast('Venda Registrada!');
       }
       await refreshClients();
       setIsModalOpen(false);
       setEditingClient(null);
       setInitialClientData(null);
     } catch (e: any) {
-      console.error('Erro ao salvar no Neon:', e);
-      showToast('Erro ao gravar no banco.', 'error');
+      showToast('Erro ao salvar.', 'error');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('devaro_session');
-    setUser(null);
   };
 
   const handleUpdateStatus = async (id: string, s: ClientStatus) => {
     try {
       await NeonService.updateClientStatus(id, s);
-      // Atualização otimista local para agilidade na UI
       setClients(prev => prev.map(c => c.id === id ? { ...c, status: s } : c));
       showToast('Status atualizado.');
     } catch (error) {
-      console.error('Erro ao mudar status:', error);
-      showToast('Erro ao atualizar status.', 'error');
-      // Reverte se der erro buscando do servidor novamente
-      await refreshClients();
+      showToast('Erro ao atualizar.', 'error');
     }
   };
 
-  const openPurchaseModal = (p: Product) => {
-    setInitialClientData({
-      appName: p.name,
-      monthlyValue: Number(p.price),
-      paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
-      status: ClientStatus.TESTING,
-      dueDay: 10
-    });
-    setEditingClient(null);
-    setIsModalOpen(true);
-  };
+  if (view === 'seller_register') {
+    return (
+      <Login 
+        onLoginSuccess={handleLoginSuccess} 
+        isSellerRegistration={true} 
+        onBack={() => setView('dashboard')}
+      />
+    );
+  }
 
   if (!user && !isLoading && view !== 'showcase') {
     return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -174,16 +177,27 @@ const App: React.FC = () => {
           clients={clients} 
           onAdd={() => { setEditingClient(null); setInitialClientData(null); setIsModalOpen(true); }} 
           onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
-          onDelete={async (id) => { if(confirm('Remover definitivamente?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
+          onDelete={async (id) => { if(confirm('Remover venda?')){ await NeonService.deleteClient(id); await refreshClients(); showToast('Removido.'); }}}
           onUpdateStatus={handleUpdateStatus}
           paymentLink={paymentLinks.link1}
         />
+      );
+      case 'sellers': return (
+        user?.role === 'ADMIN' ? (
+          <SellersManager 
+            sellers={sellers}
+            onAddSeller={async (data) => { await NeonService.registerSeller(data); await refreshSellers(); showToast('Vendedor adicionado!'); }}
+            onUpdateSeller={async (id, data) => { await NeonService.updateSeller(id, data); await refreshSellers(); showToast('Vendedor atualizado!'); }}
+            onDeleteSeller={async (id) => { if(confirm('Remover vendedor?')){ await NeonService.deleteSeller(id); await refreshSellers(); showToast('Removido.'); }}}
+          />
+        ) : <Dashboard clients={clients} />
       );
       case 'catalog': return (
         <CatalogAdmin 
           products={products}
           config={catalogConfig}
           globalLinks={paymentLinks}
+          role={user?.role}
           onSaveConfig={async (c) => { await NeonService.setSettings('catalog_config', c); setCatalogConfig(c); showToast('Identidade salva!'); }}
           onAddProduct={async (p) => { await NeonService.addProduct(p); await loadData(); showToast('Produto no Ar!'); }}
           onUpdateProduct={async (id, p) => { await NeonService.updateProduct(id, p); await loadData(); showToast('Produto atualizado!'); }}
@@ -196,30 +210,30 @@ const App: React.FC = () => {
           products={products}
           config={catalogConfig}
           onBack={() => setView('catalog')}
-          onSelectProduct={openPurchaseModal}
+          onSelectProduct={(p) => {
+             setInitialClientData({
+                appName: p.name,
+                monthlyValue: Number(p.price),
+                paymentLink: paymentLinks[p.paymentLinkId as keyof GlobalPaymentLinks] || paymentLinks.link1,
+                status: ClientStatus.TESTING,
+                dueDay: 10
+              });
+              setIsModalOpen(true);
+          }}
         />
       );
       case 'settings': return (
         <div className="max-w-3xl bg-white p-8 rounded-[32px] shadow-sm border border-slate-100">
-          <h2 className="text-xl font-black mb-6 tracking-tight">Gateways Globais</h2>
+          <h2 className="text-xl font-black mb-6 tracking-tight">Canais Globais de Checkout</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
               <div key={key} className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal de Checkout {idx + 1}</label>
-                <input 
-                  type="text" 
-                  placeholder="Link da sua fatura..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all" 
-                  value={paymentLinks[key]}
-                  onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})}
-                />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal {idx + 1}</label>
+                <input type="text" placeholder="Link da sua fatura..." className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all" value={paymentLinks[key]} onChange={(e) => setPaymentLinks({...paymentLinks, [key]: e.target.value})} />
               </div>
             ))}
           </div>
-          <button 
-            onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }}
-            className="mt-8 px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3"
-          >
+          <button onClick={async () => { await NeonService.setSettings('payment_links', paymentLinks); showToast('Canais atualizados!'); }} className="mt-8 px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3">
             <Save size={20} /> SALVAR ALTERAÇÕES
           </button>
         </div>
@@ -228,7 +242,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showSidebar = view !== 'showcase';
+  const showSidebar = view !== 'showcase' && view !== 'seller_register';
 
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden">
@@ -240,7 +254,14 @@ const App: React.FC = () => {
       )}
 
       {showSidebar && (
-        <Sidebar currentView={view} setView={setView} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
+        <Sidebar 
+          currentView={view} 
+          setView={setView} 
+          isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)} 
+          onLogout={() => { localStorage.removeItem('devaro_session'); setUser(null); setView('dashboard'); }} 
+          role={user?.role}
+        />
       )}
       
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${showSidebar ? 'lg:ml-64' : ''}`}>
@@ -249,11 +270,13 @@ const App: React.FC = () => {
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 rounded-xl"><Menu size={24} /></button>
-                <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO CRM</h1>
+                <h1 className="text-xl font-black text-slate-900 tracking-tight">DevARO {user?.role === 'SELLER' ? 'Vendas' : 'CRM'}</h1>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
-                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Neon SQL Online</span>
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{user?.name} ({user?.role})</span>
+                </div>
               </div>
             </div>
           </header>
@@ -263,7 +286,7 @@ const App: React.FC = () => {
           {isLoading ? (
             <div className="flex items-center justify-center h-64 flex-col gap-4">
                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-               <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando com Neon...</span>
+               <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Sincronizando Neon...</span>
             </div>
           ) : renderContent()}
         </div>
