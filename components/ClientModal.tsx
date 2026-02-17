@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon } from 'lucide-react';
-import { Client, ClientStatus, GlobalPaymentLinks } from '../types';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle } from 'lucide-react';
+import { Client, ClientStatus, GlobalPaymentLinks, Seller } from '../types';
 
 interface ClientModalProps {
   onClose: () => void;
   onSave: (client: Omit<Client, 'id' | 'createdAt'>) => Promise<void>;
   initialData?: Partial<Client> | null;
   globalLinks: GlobalPaymentLinks;
+  sellers: Seller[];
+  userRole?: string;
 }
 
-const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData, globalLinks }) => {
+const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData, globalLinks, sellers, userRole }) => {
+  const isAdmin = userRole === 'ADMIN';
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +25,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
     paymentLink: '',
+    seller_id: '' as string | null
   });
 
   const [isTrial, setIsTrial] = useState(false);
@@ -39,10 +43,10 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         dueDay: (initialData as any).dueDay || prev.dueDay,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
+        seller_id: (initialData as any).seller_id || prev.seller_id
       }));
       setIsTrial(initialData.status === ClientStatus.TESTING);
     } else {
-      // Default to first global link for new manual entries
       setFormData(prev => ({ ...prev, paymentLink: globalLinks.link1 }));
     }
   }, [initialData, globalLinks]);
@@ -55,7 +59,9 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     try {
       const finalData = {
         ...formData,
-        status: isTrial ? ClientStatus.TESTING : formData.status
+        status: isTrial ? ClientStatus.TESTING : formData.status,
+        // Garante que se for vendedor, o seller_id não seja sobrescrito por nulo acidentalmente
+        seller_id: formData.seller_id || null
       };
       await onSave(finalData);
     } catch (err) {
@@ -72,9 +78,11 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight">
-              {initialData && (initialData as any).id ? 'Editar Cadastro' : 'Novo Cliente / Pedido'}
+              {initialData && (initialData as any).id ? 'Editar Venda' : 'Novo Pedido de App'}
             </h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">DevARO Cloud Infrastructure</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+              {isAdmin ? 'Painel Administrativo DevARO' : 'Cadastro de Consultor'}
+            </p>
           </div>
           <button 
             type="button"
@@ -86,27 +94,33 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto pb-10 sm:pb-8">
-          {/* AVISO IMPORTANTE SOBRE COBRANÇA */}
-          <div className="bg-blue-50 border border-blue-100 p-5 rounded-[24px] flex items-start gap-4 shadow-sm">
-             <div className="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
-                <Info size={24} />
-             </div>
-             <div>
-                <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">Atenção ao Pagamento</h4>
-                <p className="text-blue-700/80 text-xs font-bold leading-relaxed mt-1">
-                  Não cobraremos nenhum valor agora. Após finalizar este pedido, um de nossos colaboradores entrará em contato pelo número informado para fechar a venda e configurar seu app.
-                </p>
-             </div>
-          </div>
-
           <div className="space-y-4">
+            {/* Campo de Vendedor - Só para Admin */}
+            {isAdmin && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <UserCircle size={12} /> Atribuir a Vendedor
+                </label>
+                <select
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 font-bold"
+                  value={formData.seller_id || ''}
+                  onChange={(e) => setFormData({...formData, seller_id: e.target.value || null})}
+                >
+                  <option value="">Venda Direta (Sem Vendedor)</option>
+                  {sellers.filter(s => s.approved && s.active).map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seu Nome / Nome da Empresa</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Cliente</label>
               <input
                 required
                 type="text"
-                placeholder="Ex: Restaurante do João"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all text-base font-medium text-slate-900"
+                placeholder="Ex: Pizzaria do Bairro"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-base font-medium text-slate-900"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
@@ -114,7 +128,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp de Contato</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
                 <input
                   required
                   type="tel"
@@ -125,7 +139,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Principal</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
                 <input
                   type="email"
                   placeholder="email@cliente.com"
@@ -136,26 +150,15 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Opcional)</label>
-              <input
-                type="text"
-                placeholder="Rua, Número, Bairro, Cidade"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-              />
-            </div>
-
             <div className="p-5 bg-slate-50 border border-slate-100 rounded-[24px] space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck size={18} className="text-blue-600" />
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configuração da Assinatura</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano do Aplicativo</label>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome do Aplicativo</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome do App</label>
                   <input
                     required
                     type="text"
@@ -166,7 +169,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Valor Mensal (R$)</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Valor Mensal</label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600" size={16} />
                     <input
@@ -183,7 +186,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <LinkIcon size={12} /> Selecionar Link de Pagamento Global
+                  <LinkIcon size={12} /> Checkout Vinculado
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
@@ -202,13 +205,6 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                     </button>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Ou cole um link personalizado aqui..."
-                  className="w-full mt-2 px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-xs text-slate-600 focus:ring-2 focus:ring-blue-600"
-                  value={formData.paymentLink}
-                  onChange={(e) => setFormData({...formData, paymentLink: e.target.value})}
-                />
               </div>
             </div>
 
@@ -219,7 +215,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 </div>
                 <div>
                   <p className="text-sm font-black text-indigo-900">Período de Teste</p>
-                  <p className="text-[10px] text-indigo-700 font-bold uppercase">Liberar 7 dias de avaliação</p>
+                  <p className="text-[10px] text-indigo-700 font-bold uppercase">7 dias grátis</p>
                 </div>
               </div>
               <button 
@@ -236,23 +232,20 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-lg hover:bg-blue-700 active:scale-[0.97] transition-all shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-3 disabled:bg-slate-300 disabled:shadow-none"
+              className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-lg hover:bg-blue-700 active:scale-[0.97] transition-all shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-3 disabled:bg-slate-300"
             >
               {isSaving ? (
                 <>
                   <Loader2 className="animate-spin" size={24} />
-                  ENVIANDO...
+                  SALVANDO VENDA...
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={24} />
-                  {initialData && (initialData as any).id ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR PEDIDO'}
+                  {initialData && (initialData as any).id ? 'ATUALIZAR DADOS' : 'FINALIZAR CADASTRO'}
                 </>
               )}
             </button>
-            <p className="text-center text-[10px] font-bold text-slate-400 uppercase mt-4 tracking-widest">
-              Garantia DevARO: Contato humano antes de qualquer cobrança.
-            </p>
           </div>
         </form>
       </div>

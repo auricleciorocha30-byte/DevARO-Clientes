@@ -87,7 +87,7 @@ const App: React.FC = () => {
 
       if (user) {
         await refreshClients();
-        await refreshSellers(); // Agora vendedores também podem ver a lista para cadastrar outros
+        await refreshSellers(); 
       }
     } catch (err) {
       console.error('Falha Neon:', err);
@@ -128,12 +128,15 @@ const App: React.FC = () => {
 
   const handleAddOrEditClient = async (clientData: any) => {
     try {
-      const dataWithSeller = { ...clientData, seller_id: user?.role === 'SELLER' ? user.id : (clientData.seller_id || null) };
+      // Prioridade: Se for vendedor logado, usa o ID dele. Se for admin, usa o que foi selecionado no modal.
+      const finalSellerId = user?.role === 'SELLER' ? user.id : (clientData.seller_id || null);
+      const dataToSave = { ...clientData, seller_id: finalSellerId };
+      
       if (editingClient) {
-        await NeonService.updateClient(editingClient.id, dataWithSeller);
+        await NeonService.updateClient(editingClient.id, dataToSave);
         showToast('Atualizado!');
       } else {
-        await NeonService.addClient(dataWithSeller);
+        await NeonService.addClient(dataToSave);
         showToast('Venda Registrada!');
       }
       await refreshClients();
@@ -171,7 +174,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (view) {
-      case 'dashboard': return <Dashboard clients={clients} />;
+      case 'dashboard': return <Dashboard clients={clients} sellers={sellers} userRole={user?.role} />;
       case 'clients': return (
         <ClientList 
           clients={clients} 
@@ -237,7 +240,7 @@ const App: React.FC = () => {
           </button>
         </div>
       );
-      default: return <Dashboard clients={clients} />;
+      default: return <Dashboard clients={clients} sellers={sellers} userRole={user?.role} />;
     }
   };
 
@@ -296,6 +299,8 @@ const App: React.FC = () => {
             onSave={handleAddOrEditClient}
             initialData={editingClient || initialClientData}
             globalLinks={paymentLinks}
+            sellers={sellers}
+            userRole={user?.role}
           />
         )}
       </main>
