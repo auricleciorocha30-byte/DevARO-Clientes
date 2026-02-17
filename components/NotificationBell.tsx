@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Info, Calendar, UserCheck, X } from 'lucide-react';
+import { Bell, Info, Calendar, UserCheck, X, AlertCircle } from 'lucide-react';
 import { AppMessage, Client, ClientStatus } from '../types';
 
 interface NotificationBellProps {
@@ -16,30 +16,35 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
     const today = new Date();
     const currentDay = today.getDate();
     
-    // Filtra vencimentos: Apenas clientes ATIVOS/TESTE que vencem hoje ou estão atrasados
+    // Alertas de Vencimento
     const overdueClients = clients.filter(c => 
       c.status !== ClientStatus.PAUSED && 
       (c.dueDay === currentDay || c.status === ClientStatus.LATE)
     ).map(c => ({
       id: `client-${c.id}`,
       type: 'warning',
-      title: c.dueDay === currentDay ? 'Vencimento Hoje' : 'Cliente Atrasado',
-      content: `O cliente ${c.name} (${c.appName}) tem um valor de R$ ${c.monthlyValue.toFixed(2)} pendente.`,
+      title: c.dueDay === currentDay ? 'Vencimento Hoje' : 'Cobrança Pendente',
+      content: `O cliente ${c.name} (${c.appName}) tem vencimento programado para o valor de R$ ${c.monthlyValue.toFixed(2)}.`,
       icon: Calendar,
       date: new Date().toISOString()
     }));
 
-    const appMsgs = messages.map(m => ({
+    // Mensagens do Admin
+    const adminMsgs = messages.map(m => ({
       id: `msg-${m.id}`,
       type: m.receiver_email ? 'private' : 'general',
-      title: m.receiver_email ? 'Mensagem Direta' : 'Comunicado DevARO',
+      title: m.receiver_email ? 'Mensagem Privada' : 'Aviso Geral DevARO',
       content: m.content,
       sender: m.sender_name,
       icon: m.receiver_email ? UserCheck : Info,
       date: m.created_at
     }));
 
-    setNotifications([...overdueClients, ...appMsgs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const allNotifications = [...overdueClients, ...adminMsgs].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    setNotifications(allNotifications);
   }, [messages, clients]);
 
   return (
@@ -63,7 +68,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
             <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <div>
                 <h3 className="font-black text-slate-900 tracking-tight">Central de Alertas</h3>
-                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Avisos e Vencimentos</p>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">DevARO Consultoria</p>
               </div>
               <button onClick={() => setIsOpen(false)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-full transition-all"><X size={18} /></button>
             </div>
@@ -88,7 +93,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients }
                   <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Bell size={40} className="text-slate-200" />
                   </div>
-                  <p className="text-slate-400 font-bold text-sm">Nenhum alerta pendente.</p>
+                  <p className="text-slate-400 font-bold text-sm">Nenhum alerta para exibir.</p>
                 </div>
               )}
             </div>

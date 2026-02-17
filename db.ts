@@ -62,7 +62,7 @@ export const initDatabase = async () => {
       );
     `);
 
-    await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
+    await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, role TEXT DEFAULT 'ADMIN', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
@@ -129,8 +129,8 @@ export const NeonService = {
 
   async updateSeller(id: string, data: any) {
     const res = await sql(`
-      UPDATE sellers SET name=$1, email=$2, address=$3, approved=$4, active=$5 WHERE id=$6 RETURNING *
-    `, [data.name, data.email, data.address, data.approved, data.active, id]);
+      UPDATE sellers SET name=$1, email=$2, address=$3, approved=$4, active=$5, password=COALESCE($6, password) WHERE id=$7 RETURNING *
+    `, [data.name, data.email, data.address, data.approved, data.active, data.password || null, id]);
     return res[0];
   },
 

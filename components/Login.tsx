@@ -19,7 +19,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Verifica se veio via link direto de cadastro
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('portal') === 'seller' || params.get('view') === 'seller_register') {
@@ -122,7 +121,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade / Estado</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Cidade/UF)</label>
                 <div className="relative">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                   <input required type="text" placeholder="Sua localização" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={address} onChange={e => setAddress(e.target.value)} />

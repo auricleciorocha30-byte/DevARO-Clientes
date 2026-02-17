@@ -31,7 +31,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     name: '',
@@ -65,7 +65,6 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       externalLink: product.externalLink || ''
     });
     setShowProductForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const resetForm = () => {
@@ -95,181 +94,149 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       resetForm();
     } catch (error: any) {
       console.error('Falha ao salvar:', error);
-      alert(`Erro no Banco de Dados: ${error.message || 'Erro desconhecido'}`);
+      alert('Erro ao salvar produto.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleCopyLink = (product: Product) => {
+    const link = globalLinks[product.paymentLinkId as keyof GlobalPaymentLinks] || 'Link não configurado';
+    navigator.clipboard.writeText(link);
+    setCopiedId(product.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
     <div className="space-y-8 pb-20">
-      {/* Configurações do Encarte - Apenas Admin pode ver os inputs de edição */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{isAdmin ? 'Configuração do Encarte' : 'Catálogo de Apps'}</h2>
+            <h2 className="text-xl font-bold text-slate-900">{isAdmin ? 'Configuração do Encarte' : 'Catálogo de Apps DevARO'}</h2>
             <p className="text-xs text-slate-500 mt-1">
-              {isAdmin ? 'Personalize como os clientes verão seus produtos.' : 'Visualize e copie links para enviar aos clientes.'}
+              {isAdmin ? 'Gerencie os produtos e identidade da loja.' : 'Escolha um app abaixo para copiar o link de divulgação.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-             <button onClick={() => {
-                const url = window.location.origin + window.location.pathname + '?view=showcase';
-                navigator.clipboard.writeText(url);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-             }} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
-              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Link Copiado!' : 'Copiar Link Encarte'}
-            </button>
-            <button onClick={onPreview} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold border border-blue-100 active:scale-95">
-              <ExternalLink size={16} /> Ver Online
+            <button onClick={onPreview} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+              <ExternalLink size={18} /> Ver Encarte Online
             </button>
           </div>
         </div>
 
         {isAdmin && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
-                <input type="text" placeholder="Ex: DevARO Apps" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
-                <input type="text" placeholder="Cidade - Estado" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
+              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
             </div>
-            <button onClick={() => onSaveConfig(localConfig)} className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all shadow-lg shadow-blue-600/20">
-              Salvar Identidade
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
+              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
+            </div>
+            <button onClick={() => onSaveConfig(localConfig)} className="md:col-span-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-xl active:scale-95 transition-all">
+              Salvar Dados do Encarte
             </button>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Meus Produtos */}
       <div>
         <div className="flex items-center justify-between mb-6 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Apps Disponíveis</h2>
-          {isAdmin && !showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl active:scale-95 shadow-md"><Plus size={18} /> Novo</button>}
+          <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Apps Cadastrados</h2>
+          {isAdmin && !showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-black rounded-xl active:scale-95 shadow-lg"><Plus size={18} /> Novo App</button>}
         </div>
 
         {isAdmin && showProductForm && (
-          <div className="mb-8 bg-white p-6 rounded-2xl shadow-xl border-2 border-blue-100 animate-in zoom-in-95">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">{editingProductId ? 'Editar Produto' : 'Novo Produto'}</h3>
+          <div className="mb-8 bg-white p-8 rounded-[40px] shadow-2xl border-2 border-blue-100 animate-in zoom-in-95">
+             <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black">{editingProductId ? 'Editar Dados do App' : 'Lançar Novo App'}</h3>
               <button onClick={resetForm} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <input required placeholder="Nome do App/Produto" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                  <textarea required rows={3} placeholder="Descrição curta para o encarte" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="space-y-4">
+                  <input required placeholder="Nome do Aplicativo" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                  <textarea required rows={3} placeholder="Breve descrição dos recursos" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                    <input required type="number" step="0.01" placeholder="0,00" className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">R$</span>
+                    <input required type="number" step="0.01" className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
                   </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-3">Vincular Link de Pagamento Global</label>
+               </div>
+               <div className="space-y-4">
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-3">Vincular Link de Checkout (Global)</label>
                     <div className="grid grid-cols-2 gap-2">
                       {(['link1', 'link2', 'link3', 'link4'] as const).map((id, idx) => (
                         <button
                           key={id}
                           type="button"
                           onClick={() => setNewProduct({...newProduct, paymentLinkId: id})}
-                          className={`px-3 py-2.5 rounded-lg text-xs font-bold border transition-all ${newProduct.paymentLinkId === id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
+                          className={`px-3 py-3 rounded-xl text-[11px] font-black border transition-all ${newProduct.paymentLinkId === id ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
                         >
-                          Plano {idx + 1}
+                          CANAL {idx + 1}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-4 p-2">
-                    <div className="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {newProduct.photo ? <img src={newProduct.photo} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={24} />}
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                      {newProduct.photo ? <img src={newProduct.photo} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={32} />}
                     </div>
-                    <div>
-                      <label className="cursor-pointer px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors inline-block">
-                        Selecionar Imagem
-                        <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
-                      </label>
-                    </div>
+                    <label className="cursor-pointer px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
+                      MUDAR FOTO
+                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                    </label>
                   </div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-50">
-                <button 
-                  type="submit" 
-                  disabled={isSaving}
-                  className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:bg-slate-400"
-                >
-                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : 'SALVAR PRODUTO'}
-                </button>
-                <button type="button" onClick={resetForm} className="px-8 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">
-                  CANCELAR
-                </button>
-              </div>
+               </div>
+               <div className="md:col-span-2 flex gap-3 pt-6 border-t border-slate-50">
+                  <button disabled={isSaving} type="submit" className="flex-1 py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+                    {isSaving ? <Loader2 className="animate-spin" size={24} /> : (editingProductId ? 'SALVAR ALTERAÇÕES' : 'LANÇAR APLICATIVO')}
+                  </button>
+               </div>
             </form>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map(product => (
-            <div key={product.id} className="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-md transition-all">
-              <div className="h-44 bg-slate-50 relative overflow-hidden">
+            <div key={product.id} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-300">
+              <div className="h-48 bg-slate-50 relative overflow-hidden">
                 {product.photo ? (
                   <img src={product.photo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-200">
-                    <ShoppingBag size={48} />
+                    <ShoppingBag size={64} />
                   </div>
                 )}
                 {isAdmin && (
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    <button onClick={() => handleEditClick(product)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={16} /></button>
-                    <button onClick={() => onDeleteProduct(product.id)} className="p-2 bg-white/95 backdrop-blur rounded-xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={16} /></button>
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <button onClick={() => handleEditClick(product)} className="p-2.5 bg-white/95 backdrop-blur rounded-2xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={18} /></button>
+                    <button onClick={() => onDeleteProduct(product.id)} className="p-2.5 bg-white/95 backdrop-blur rounded-2xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={18} /></button>
                   </div>
                 )}
               </div>
-              <div className="p-5">
+              <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-slate-900 line-clamp-1">{product.name}</h4>
-                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-wider">
-                    Checkout {(product.paymentLinkId || 'link1').replace('link', '')}
-                  </span>
+                  <h4 className="font-black text-slate-900 text-lg line-clamp-1">{product.name}</h4>
                 </div>
-                <p className="text-xs text-slate-500 line-clamp-2 mb-4 min-h-[32px]">{product.description}</p>
+                <p className="text-xs text-slate-500 line-clamp-2 mb-6 font-medium leading-relaxed">{product.description}</p>
                 
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Mensalidade</span>
-                    <span className="text-blue-600 font-black text-lg">R$ {product.price.toFixed(2)}</span>
+                <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-50">
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Assinatura</span>
+                    <span className="text-blue-600 font-black text-2xl">R$ {product.price.toFixed(2)}</span>
                   </div>
                   <button 
-                    onClick={() => {
-                      const link = globalLinks[product.paymentLinkId as keyof GlobalPaymentLinks] || '';
-                      navigator.clipboard.writeText(link);
-                      alert('Link do checkout copiado para o seu WhatsApp!');
-                    }}
-                    className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100"
-                    title="Copiar link de pagamento deste produto"
+                    onClick={() => handleCopyLink(product)}
+                    className={`px-5 py-3 rounded-2xl font-black text-xs transition-all flex items-center gap-2 shadow-lg active:scale-95 ${copiedId === product.id ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-blue-600'}`}
                   >
-                    <Copy size={18} />
+                    {copiedId === product.id ? <Check size={16} /> : <Copy size={16} />}
+                    {copiedId === product.id ? 'COPIADO' : 'COPIAR LINK'}
                   </button>
                 </div>
               </div>
             </div>
           ))}
-          
-          {products.length === 0 && !showProductForm && isAdmin && (
-            <button onClick={() => setShowProductForm(true)} className="aspect-[4/3] rounded-[24px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all group">
-               <Plus className="group-hover:scale-110 transition-transform" size={32} />
-               <span className="font-bold">Adicionar Primeiro Item</span>
-            </button>
-          )}
         </div>
       </div>
     </div>
