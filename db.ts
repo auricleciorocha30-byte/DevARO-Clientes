@@ -22,6 +22,7 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
+    // Create tables if they don't exist
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,10 +67,12 @@ export const initDatabase = async () => {
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
+    // Migrations to ensure all columns exist
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS seller_id UUID;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`
     ];

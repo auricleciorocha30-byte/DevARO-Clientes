@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle } from 'lucide-react';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar } from 'lucide-react';
 import { Client, ClientStatus, GlobalPaymentLinks, Seller } from '../types';
 
 interface ClientModalProps {
@@ -40,7 +40,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         address: (initialData as any).address || prev.address,
         appName: initialData.appName || prev.appName,
         monthlyValue: Number(initialData.monthlyValue) || prev.monthlyValue,
-        dueDay: (initialData as any).dueDay || prev.dueDay,
+        dueDay: (initialData as any).dueDay || prev.dueDay || 10,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
         seller_id: (initialData as any).seller_id || prev.seller_id
@@ -60,7 +60,6 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
       const finalData = {
         ...formData,
         status: isTrial ? ClientStatus.TESTING : formData.status,
-        // Garante que se for vendedor, o seller_id não seja sobrescrito por nulo acidentalmente
         seller_id: formData.seller_id || null
       };
       await onSave(finalData);
@@ -95,7 +94,6 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto pb-10 sm:pb-8">
           <div className="space-y-4">
-            {/* Campo de Vendedor - Só para Admin */}
             {isAdmin && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -120,7 +118,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 required
                 type="text"
                 placeholder="Ex: Pizzaria do Bairro"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-base font-medium text-slate-900"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-base font-bold text-slate-900"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
@@ -133,7 +131,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                   required
                   type="tel"
                   placeholder="85 99999-9999"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 font-bold"
                   value={formData.whatsapp}
                   onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
                 />
@@ -143,7 +141,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 <input
                   type="email"
                   placeholder="email@cliente.com"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 font-bold"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                 />
@@ -184,9 +182,25 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 </div>
               </div>
 
+              {/* DUA DAY FIELD - dia do vencimento */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <LinkIcon size={12} /> Checkout Vinculado
+                  <Calendar size={12} /> Dia do Vencimento (1-31)
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  max="31"
+                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-black focus:ring-2 focus:ring-blue-600"
+                  value={formData.dueDay}
+                  onChange={(e) => setFormData({...formData, dueDay: parseInt(e.target.value)})}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <LinkIcon size={12} /> Canal de Checkout
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(['link1', 'link2', 'link3', 'link4'] as const).map((key, idx) => (
@@ -215,7 +229,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 </div>
                 <div>
                   <p className="text-sm font-black text-indigo-900">Período de Teste</p>
-                  <p className="text-[10px] text-indigo-700 font-bold uppercase">7 dias grátis</p>
+                  <p className="text-[10px] text-indigo-700 font-bold uppercase">Ativar modo cortesia (7 dias)</p>
                 </div>
               </div>
               <button 
@@ -232,17 +246,17 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-lg hover:bg-blue-700 active:scale-[0.97] transition-all shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-3 disabled:bg-slate-300"
+              className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-lg hover:bg-blue-700 active:scale-[0.97] transition-all shadow-2xl shadow-blue-500/30 flex items-center justify-center gap-3 disabled:bg-slate-300"
             >
               {isSaving ? (
                 <>
                   <Loader2 className="animate-spin" size={24} />
-                  SALVANDO VENDA...
+                  SALVANDO...
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={24} />
-                  {initialData && (initialData as any).id ? 'ATUALIZAR DADOS' : 'FINALIZAR CADASTRO'}
+                  {initialData && (initialData as any).id ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR VENDA'}
                 </>
               )}
             </button>

@@ -35,7 +35,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
         if (user) {
           onLoginSuccess(user);
         } else {
-          setError('Credenciais inválidas ou acesso não autorizado.');
+          setError('E-mail ou senha incorretos.');
         }
       }
     } catch (err: any) {
@@ -57,8 +57,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
             <p className="text-blue-600 font-black uppercase text-xl tracking-tight">
               Aguarde ser aprovado
             </p>
-            <p className="text-slate-400 text-xs font-medium">
-              Seu cadastro como colaborador DevARO foi recebido. Em breve você terá acesso ao painel.
+            <p className="text-slate-400 text-xs font-medium px-4">
+              Sua solicitação de consultor está sendo analisada por um administrador.
             </p>
           </div>
           <button 
@@ -82,17 +82,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               <Code2 size={32} className="text-white" />
             </div>
             <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">DevARO <span className="text-blue-500 not-italic font-light">ADM</span></h1>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Painel de Controle</p>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Admin Console</p>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-white p-10 rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] space-y-6">
             {error && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-[11px] font-bold border border-red-100 flex items-center gap-2 animate-shake"><AlertCircle size={16} /> {error}</div>}
             
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuário / E-mail</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                <input required type="email" placeholder="admin@devaro.com" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
+                <input required type="email" placeholder="admin@devaro.com" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             </div>
 
@@ -100,22 +100,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                <input required type="password" placeholder="••••••••" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
+                <input required type="password" placeholder="••••••••" className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
               </div>
             </div>
 
             <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3">
               {loading ? <Loader2 className="animate-spin" size={24} /> : 'ENTRAR NO PAINEL'}
             </button>
-
-            <div className="flex flex-col gap-3 items-center pt-2">
-              <button type="button" className="text-[10px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors tracking-widest">Esqueceu a senha?</button>
-              <div className="h-px w-8 bg-slate-100"></div>
-              <button type="button" className="text-[10px] font-black text-blue-600 uppercase hover:underline tracking-widest">Cadastrar-se</button>
-            </div>
           </form>
-          
-          <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest opacity-40">DevARO Cloud Infrastructure</p>
+          <p className="text-center text-[9px] text-slate-600 font-black uppercase tracking-widest opacity-40">Acesso Restrito Administradores</p>
         </div>
       </div>
     );
@@ -134,7 +127,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
             DevARO <span className="font-light not-italic tracking-normal opacity-80">CRM</span>
           </h1>
           <p className="text-blue-100 mt-3 font-bold uppercase text-[10px] tracking-[0.3em] opacity-80 uppercase">
-            Painel de Consultoria
+            Portal do Vendedor
           </p>
         </div>
 
@@ -168,49 +161,49 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type="text" placeholder="Nome Sobrenome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={name} onChange={e => setName(e.target.value)} />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type="text" placeholder="Seu nome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={name} onChange={e => setName(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail para Login</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type="email" placeholder="vendedor@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type="email" placeholder="vendedor@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha de Acesso</label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Cidade/Estado)</label>
                 <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type="text" placeholder="Cidade - UF" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={address} onChange={e => setAddress(e.target.value)} />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type="text" placeholder="Ex: São Paulo - SP" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-4 animate-in slide-in-from-left-4 duration-300">
                <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail Cadastrado</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type="email" placeholder="seu@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={email} onChange={e => setEmail(e.target.value)} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type="email" placeholder="seu@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold transition-all" value={password} onChange={e => setPassword(e.target.value)} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -220,7 +213,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
           )}
 
           <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-3">
-            {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'FINALIZAR CADASTRO' : 'ENTRAR NO PAINEL')}
+            {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'FINALIZAR CADASTRO' : 'ACESSAR PAINEL')}
           </button>
         </form>
       </div>

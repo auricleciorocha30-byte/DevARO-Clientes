@@ -73,10 +73,10 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={24} />
           <input 
             type="text" 
-            placeholder="Pesquisar vendedor por nome ou e-mail..." 
+            placeholder="Procurar consultor..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-[28px] outline-none focus:ring-2 focus:ring-blue-600 font-bold text-lg transition-all" 
+            className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-[28px] outline-none focus:ring-2 focus:ring-blue-600 font-black text-lg transition-all" 
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
@@ -84,7 +84,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
             onClick={openPortal} 
             className="px-8 py-5 bg-slate-900 text-white rounded-[28px] font-black flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl active:scale-95"
           >
-            <ExternalLink size={24} /> Link do Portal
+            <ExternalLink size={24} /> Portal de Recrutamento
           </button>
           <button 
             onClick={() => { setIsAdding(true); setEditingSeller(null); setFormData({ name: '', email: '', password: '', address: '' }); }} 
@@ -98,7 +98,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
       {isAdding && (
         <div className="bg-white p-10 rounded-[48px] border-4 border-blue-50 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] animate-in zoom-in-95 sticky top-28 z-40">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{editingSeller ? 'Alterar Dados' : 'Cadastro Manual'}</h3>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{editingSeller ? 'Editar Vendedor' : 'Novo Vendedor Manual'}</h3>
             <button onClick={() => setIsAdding(false)} className="p-3 bg-slate-100 rounded-full hover:bg-slate-200 transition-all active:scale-90"><X size={24} /></button>
           </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -107,20 +107,20 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
               <input required placeholder="Nome do vendedor" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail (Login)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail (Acesso)</label>
               <input required type="email" placeholder="vendedor@email.com" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{editingSeller ? 'Nova Senha (opcional)' : 'Senha'}</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{editingSeller ? 'Mudar Senha (Opcional)' : 'Senha de Acesso'}</label>
               <input required={!editingSeller} type="password" placeholder="••••••••" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade - UF</label>
-              <input placeholder="Ex: Fortaleza - CE" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+              <input placeholder="Fortaleza - CE" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
             </div>
             <div className="md:col-span-2 flex gap-4 pt-6 border-t border-slate-50">
               <button disabled={loadingActionId === 'submit'} type="submit" className="flex-1 bg-blue-600 text-white py-5 rounded-3xl font-black text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3">
-                {loadingActionId === 'submit' ? <Loader2 className="animate-spin" size={24} /> : (editingSeller ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR CADASTRO')}
+                {loadingActionId === 'submit' ? <Loader2 className="animate-spin" size={24} /> : (editingSeller ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO')}
               </button>
             </div>
           </form>
@@ -139,10 +139,10 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
                   <h4 className="font-black text-slate-900 text-lg leading-tight mb-1">{seller.name}</h4>
                   <div className="flex items-center gap-2">
                     {!seller.approved ? (
-                      <span className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-3 py-1 rounded-full border border-amber-200"><ShieldAlert size={12} /> AGUARDANDO APROVAÇÃO</span>
+                      <span className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-3 py-1 rounded-full border border-amber-200 tracking-tight"><ShieldAlert size={12} /> PENDENTE APROVAÇÃO</span>
                     ) : (
                       <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${seller.active ? 'bg-green-100 text-green-600 border-green-200' : 'bg-red-100 text-red-600 border-red-200'}`}>
-                        {seller.active ? 'Colaborador Ativo' : 'Acesso Bloqueado'}
+                        {seller.active ? 'Ativo' : 'Bloqueado'}
                       </span>
                     )}
                   </div>
@@ -156,7 +156,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
                   <Edit3 size={20} />
                 </button>
                 <button 
-                  onClick={() => confirm('Excluir este vendedor?') && onDeleteSeller(seller.id)} 
+                  onClick={() => confirm('Remover este consultor?') && onDeleteSeller(seller.id)} 
                   className="p-3 bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-2xl border border-slate-100 active:scale-90"
                 >
                   <Trash2 size={20} />
@@ -181,7 +181,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
                   className="w-full flex items-center justify-center gap-3 bg-green-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-green-600/20 active:scale-95 transition-all hover:bg-green-700 disabled:bg-slate-300"
                 >
                   {loadingActionId === seller.id ? <Loader2 className="animate-spin" size={20} /> : <UserCheck2 size={20} />}
-                  ACEITAR E LIBERAR ACESSO
+                  APROVAR CONSULTOR
                 </button>
               ) : (
                 <button 
@@ -190,7 +190,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
                   className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 disabled:bg-slate-300 ${seller.active ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100' : 'bg-green-600 text-white shadow-xl shadow-green-600/20 hover:bg-green-700'}`}
                 >
                   {loadingActionId === seller.id ? <Loader2 className="animate-spin" size={20} /> : (seller.active ? <UserX size={20} /> : <UserCheck2 size={20} />)}
-                  {seller.active ? 'BLOQUEAR ACESSO' : 'REATIVAR ACESSO'}
+                  {seller.active ? 'SUSPENDER ACESSO' : 'REATIVAR CONSULTOR'}
                 </button>
               )}
             </div>
