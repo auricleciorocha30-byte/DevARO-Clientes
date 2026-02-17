@@ -94,7 +94,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
             onClick={() => setIsRegistering(false)} 
             className={`flex-1 py-5 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${!isRegistering ? 'text-blue-600 border-b-4 border-blue-600 bg-blue-50/20' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            Já é colaborador?
+            Já é nosso colaborador?
           </button>
           <button 
             onClick={() => setIsRegistering(true)} 

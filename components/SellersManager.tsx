@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UserPlus, CheckCircle, XCircle, Trash2, Edit3, Mail, MapPin, Copy, Check, Search, UserCheck, X, ShieldAlert, UserX, UserCheck2 } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Trash2, Edit3, Mail, MapPin, Copy, Check, Search, UserCheck, X, ShieldAlert, UserX, UserCheck2, ExternalLink } from 'lucide-react';
 import { Seller } from '../types';
 
 interface SellersManagerProps {
@@ -32,24 +32,40 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
     setFormData({ name: '', email: '', password: '', address: '' });
   };
 
+  const openPortal = () => {
+    const url = window.location.origin + window.location.pathname + '?portal=seller';
+    window.open(url, '_blank');
+  };
+
   if (!isAdmin) return null;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-        <div className="relative flex-1 w-full">
+      <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
-            placeholder="Pesquisar por nome ou e-mail do vendedor..." 
+            placeholder="Pesquisar vendedor..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" 
           />
         </div>
-        <button onClick={() => { setIsAdding(true); setEditingSeller(null); setFormData({ name: '', email: '', password: '', address: '' }); }} className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 active:scale-95 transition-all">
-          <UserPlus size={20} /> Adicionar Manualmente
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button 
+            onClick={openPortal} 
+            className="px-6 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-100"
+          >
+            <ExternalLink size={20} /> Link do Portal
+          </button>
+          <button 
+            onClick={() => { setIsAdding(true); setEditingSeller(null); setFormData({ name: '', email: '', password: '', address: '' }); }} 
+            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
+          >
+            <UserPlus size={20} /> Adicionar Manualmente
+          </button>
+        </div>
       </div>
 
       {isAdding && (
@@ -64,11 +80,11 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
               <input required placeholder="Nome completo" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail para Login</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Usuário (E-mail)</label>
               <input required type="email" placeholder="vendedor@devaro.com" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">{editingSeller ? 'Nova Senha (Opcional)' : 'Senha Inicial'}</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">{editingSeller ? 'Nova Senha (Opcional)' : 'Senha de Acesso'}</label>
               <input required={!editingSeller} type="password" placeholder="••••••••" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
             </div>
             <div className="space-y-1">
@@ -99,7 +115,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
                       <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-2 py-0.5 rounded-full"><ShieldAlert size={10} /> Pendente</span>
                     ) : (
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${seller.active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                        {seller.active ? 'Colaborador Ativo' : 'Acesso Banido'}
+                        {seller.active ? 'Ativo' : 'Banido'}
                       </span>
                     )}
                   </div>
