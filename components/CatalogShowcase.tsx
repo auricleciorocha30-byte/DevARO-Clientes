@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, Info } from 'lucide-react';
+import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, Info, Tag } from 'lucide-react';
 import { Product, CatalogConfig } from '../types';
 
 interface CatalogShowcaseProps {
@@ -84,6 +84,14 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                     <ShoppingBag size={100} />
                   </div>
                 )}
+                
+                {/* Badge de Categoria */}
+                <div className="absolute top-6 left-6">
+                   <span className="bg-blue-600/90 backdrop-blur-md text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] border border-white/20 shadow-xl flex items-center gap-2">
+                     <Tag size={12} /> {product.category || 'Geral'}
+                   </span>
+                </div>
+
                 <div className="absolute bottom-6 right-6">
                    <div className="bg-white/95 backdrop-blur-md text-blue-600 px-6 py-3 rounded-2xl font-black text-2xl shadow-2xl border border-blue-50 flex items-baseline gap-1">
                      <span className="text-xs font-bold text-slate-400 mr-1">R$</span>{product.price.toFixed(2)}<span className="text-xs font-bold text-slate-400 ml-1">/mês</span>
@@ -100,7 +108,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                 
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Checkout Manual</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Opções Disponíveis</span>
                     <div className="flex gap-1.5 mt-1">
                       {product.paymentMethods && product.paymentMethods.length > 0 ? product.paymentMethods.map(m => (
                         <span key={m} className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
@@ -108,7 +116,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                         </span>
                       )) : (
                         <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-400 px-3 py-1 rounded-full border border-slate-200">
-                          PIX / Cartão via Contato
+                          PIX / Cartão / Link
                         </span>
                       )}
                     </div>
@@ -130,22 +138,21 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
         {products.length === 0 && (
           <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-200 animate-pulse">
             <ShoppingCart className="mx-auto text-slate-100 mb-6" size={80} />
-            <p className="text-slate-400 font-black text-xl">Carregando ofertas...</p>
-            <p className="text-slate-300 text-sm mt-2">Sincronizando com o servidor Neon.</p>
+            <p className="text-slate-400 font-black text-xl">Buscando Soluções...</p>
+            <p className="text-slate-300 text-sm mt-2">Atualizando portfólio DevARO.</p>
           </div>
         )}
 
         <div className="py-12 text-center space-y-3">
            <div className="w-12 h-1 bg-slate-200 mx-auto rounded-full mb-6"></div>
-           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">DevARO Cloud Infrastructure</p>
-           <p className="text-[10px] text-slate-300 font-bold">Solicite seu app e aguarde nosso contato.</p>
+           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">DevARO CRM Cloud</p>
+           <p className="text-[10px] text-slate-300 font-bold italic">Soluções digitais inteligentes.</p>
         </div>
       </main>
 
-      {/* FOOTER FIXO DE INFORMAÇÃO */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-100 p-4 text-center z-[100] hidden sm:block">
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-          Atenção: Nenhum valor será cobrado ao finalizar o pedido. Um colaborador entrará em contato para fechar a venda.
+          Para contratar, selecione um app e envie seu pedido pelo chat ou link seguro.
         </p>
       </footer>
     </div>

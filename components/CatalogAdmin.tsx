@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Image as ImageIcon, MapPin, Check, ShoppingBag, Link as LinkIcon, Copy, X, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Image as ImageIcon, Check, ShoppingBag, Copy, X, ExternalLink, Loader2, Tag, Filter } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod, GlobalPaymentLinks } from '../types';
 
 interface CatalogAdminProps {
@@ -32,9 +32,11 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState('Todas');
   
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     name: '',
+    category: '',
     description: '',
     price: 0,
     photo: '',
@@ -42,6 +44,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     paymentLinkId: 'link1',
     externalLink: ''
   });
+
+  const categories = Array.from(new Set(products.map(p => p.category || 'Geral')));
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,6 +61,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     setEditingProductId(product.id);
     setNewProduct({
       name: product.name,
+      category: product.category || '',
       description: product.description,
       price: product.price,
       photo: product.photo,
@@ -72,6 +77,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     setEditingProductId(null);
     setNewProduct({
       name: '',
+      category: '',
       description: '',
       price: 0,
       photo: '',
@@ -107,6 +113,10 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const filteredProducts = categoryFilter === 'Todas' 
+    ? products 
+    : products.filter(p => (p.category || 'Geral') === categoryFilter);
+
   return (
     <div className="space-y-8 pb-20">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -114,7 +124,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900">{isAdmin ? 'Configuração do Encarte' : 'Catálogo de Apps DevARO'}</h2>
             <p className="text-xs text-slate-500 mt-1">
-              {isAdmin ? 'Gerencie os produtos e identidade da loja.' : 'Escolha um app abaixo para copiar o link de divulgação.'}
+              {isAdmin ? 'Gerencie os produtos, categorias e identidade da loja.' : 'Escolha um app abaixo para copiar o link de divulgação.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -128,11 +138,11 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome da Empresa</label>
-              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
+              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={localConfig.companyName} onChange={e => setLocalConfig({...localConfig, companyName: e.target.value})} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço de Exibição</label>
-              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
+              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={localConfig.address} onChange={e => setLocalConfig({...localConfig, address: e.target.value})} />
             </div>
             <button onClick={() => onSaveConfig(localConfig)} className="md:col-span-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-xl active:scale-95 transition-all">
               Salvar Dados do Encarte
@@ -142,8 +152,21 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-6 px-1">
-          <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Apps Cadastrados</h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Apps Cadastrados</h2>
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full">
+               <Filter size={14} className="text-slate-400" />
+               <select 
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-transparent text-[10px] font-black uppercase text-slate-600 outline-none"
+               >
+                 <option value="Todas">Filtrar Categoria</option>
+                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+               </select>
+            </div>
+          </div>
           {isAdmin && !showProductForm && <button onClick={() => setShowProductForm(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-black rounded-xl active:scale-95 shadow-lg"><Plus size={18} /> Novo App</button>}
         </div>
 
@@ -155,16 +178,33 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
             </div>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="space-y-4">
-                  <input required placeholder="Nome do Aplicativo" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                  <textarea required rows={3} placeholder="Breve descrição dos recursos" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
-                  <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">R$</span>
-                    <input required type="number" step="0.01" className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Aplicativo</label>
+                    <input required placeholder="Ex: Gestor de Delivery" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1"><Tag size={10} /> Categoria</label>
+                    <input required placeholder="Ex: Gestão, Vendas, Delivery..." className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição Curta</label>
+                    <textarea required rows={3} placeholder="Breve descrição dos recursos" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
                   </div>
                </div>
+               
                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor da Assinatura</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">R$</span>
+                      <input required type="number" step="0.01" className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                    </div>
+                  </div>
+
                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-3">Vincular Link de Checkout (Global)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-3">Vincular Canal de Checkout</label>
                     <div className="grid grid-cols-2 gap-2">
                       {(['link1', 'link2', 'link3', 'link4'] as const).map((id, idx) => (
                         <button
@@ -198,8 +238,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map(product => (
-            <div key={product.id} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-300">
+          {filteredProducts.map(product => (
+            <div key={product.id} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-300 flex flex-col">
               <div className="h-48 bg-slate-50 relative overflow-hidden">
                 {product.photo ? (
                   <img src={product.photo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -211,11 +251,21 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                 {isAdmin && (
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button onClick={() => handleEditClick(product)} className="p-2.5 bg-white/95 backdrop-blur rounded-2xl shadow-lg text-blue-600 hover:bg-white active:scale-90 transition-all"><Edit2 size={18} /></button>
-                    <button onClick={() => onDeleteProduct(product.id)} className="p-2.5 bg-white/95 backdrop-blur rounded-2xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"><Trash2 size={18} /></button>
+                    <button 
+                      onClick={() => { if(confirm('Remover este app definitivamente?')) onDeleteProduct(product.id) }} 
+                      className="p-2.5 bg-white/95 backdrop-blur rounded-2xl shadow-lg text-red-600 hover:bg-white active:scale-90 transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 )}
+                <div className="absolute bottom-4 left-4">
+                   <span className="px-3 py-1 bg-slate-900/80 backdrop-blur text-white text-[9px] font-black uppercase rounded-lg tracking-widest border border-white/10">
+                     {product.category || 'Geral'}
+                   </span>
+                </div>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-black text-slate-900 text-lg line-clamp-1">{product.name}</h4>
                 </div>
@@ -238,6 +288,13 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
             </div>
           ))}
         </div>
+
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-24 bg-white rounded-[40px] border-2 border-dashed border-slate-100">
+             <Filter size={64} className="mx-auto text-slate-100 mb-4" />
+             <p className="text-slate-400 font-bold">Nenhum app encontrado nesta categoria.</p>
+          </div>
+        )}
       </div>
     </div>
   );

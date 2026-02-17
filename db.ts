@@ -67,7 +67,7 @@ export const initDatabase = async () => {
     `);
 
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, role TEXT DEFAULT 'ADMIN', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
-    await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
+    await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, category TEXT, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
     // Migrations to ensure all columns exist
@@ -81,7 +81,8 @@ export const initDatabase = async () => {
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_name TEXT DEFAULT 'Admin';`,
       `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`,
       `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;`,
-      `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE;`
+      `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;`
     ];
     
     for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
@@ -178,11 +179,11 @@ export const NeonService = {
 
   async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },
   async addProduct(p: any) {
-    const res = await sql(`INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
+    const res = await sql(`INSERT INTO products (name, category, description, price, photo, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
     return res[0];
   },
   async updateProduct(id: string, p: any) {
-    const res = await sql(`UPDATE products SET name=$1, description=$2, price=$3, photo=$4, payment_methods=$5, payment_link_id=$6, external_link=$7 WHERE id=$8 RETURNING *`, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
+    const res = await sql(`UPDATE products SET name=$1, category=$2, description=$3, price=$4, photo=$5, payment_methods=$6, payment_link_id=$7, external_link=$8 WHERE id=$9 RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
     return res[0];
   },
   async deleteProduct(id: string) { return await sql('DELETE FROM products WHERE id=$1', [id]); },
