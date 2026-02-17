@@ -18,8 +18,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
   const menuItems = [
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clients' as View, label: 'Minhas Vendas', icon: Users },
-    { id: 'catalog' as View, label: 'Apps & Links', icon: ShoppingBag }, // Agora visível para todos
-    { id: 'sellers' as View, label: 'Vendedores', icon: UserCheck, hidden: !isAdmin },
+    { id: 'catalog' as View, label: 'Apps & Links', icon: ShoppingBag },
+    { id: 'sellers' as View, label: 'Vendedores', icon: UserCheck }, // Vendedores agora podem acessar para cadastrar outros
     { id: 'settings' as View, label: 'Configurações', icon: Settings, hidden: !isAdmin },
   ].filter(item => !item.hidden);
 
@@ -58,8 +58,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
             <LogOut size={22} /> Sair do Painel
           </button>
           <div className="px-5">
-            <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">Neon SQL Infrastructure</p>
-            <p className="text-slate-400 text-xs font-medium">Cache Memory Active</p>
+            <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">Neon SQL Online</p>
+            <p className="text-slate-400 text-xs font-medium">Memória Cache Ativa</p>
           </div>
         </div>
       </aside>

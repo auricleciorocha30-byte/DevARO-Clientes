@@ -9,11 +9,11 @@ const normalizeData = (data: any) => {
     email: String(data.email || '').trim().toLowerCase(),
     whatsapp: String(data.whatsapp || '').replace(/\D/g, ''),
     address: String(data.address || '').trim(),
-    appName: String(data.appName || 'App Indefinido').trim(),
-    monthlyValue: isNaN(parseFloat(data.monthlyValue)) ? 0 : parseFloat(data.monthlyValue),
-    dueDay: isNaN(parseInt(data.dueDay)) ? 10 : Math.max(1, Math.min(31, parseInt(data.dueDay))),
+    appName: String(data.appname || data.appName || 'App Indefinido').trim(),
+    monthlyValue: isNaN(parseFloat(data.monthlyvalue || data.monthlyValue)) ? 0 : parseFloat(data.monthlyvalue || data.monthlyValue),
+    dueDay: isNaN(parseInt(data.dueday || data.dueDay)) ? 10 : Math.max(1, Math.min(31, parseInt(data.dueday || data.dueDay))),
     status: String(data.status || 'ACTIVE').toUpperCase(),
-    paymentLink: String(data.paymentLink || '').trim(),
+    paymentLink: String(data.payment_link || data.paymentLink || '').trim(),
     seller_id: data.seller_id || null
   };
 };
@@ -22,7 +22,7 @@ export const initDatabase = async () => {
   try {
     await sql(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
-    // Criar tabelas base se não existirem
+    // Clients Table
     await sql(`
       CREATE TABLE IF NOT EXISTS clients (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -40,6 +40,7 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Sellers Table
     await sql(`
       CREATE TABLE IF NOT EXISTS sellers (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,11 +54,12 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Users and Config Tables
     await sql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
     await sql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await sql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
-    // Migrações Críticas (Adicionar colunas faltantes em tabelas existentes)
+    // Migrations for columns
     const migrations = [
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS seller_id UUID;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
@@ -65,14 +67,12 @@ export const initDatabase = async () => {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`
     ];
     
-    for (const cmd of migrations) { 
-      try { await sql(cmd); } catch (e) { console.debug('Neon Migration info:', cmd); } 
-    }
+    for (const cmd of migrations) { try { await sql(cmd); } catch (e) {} }
 
-    // Agora que a coluna 'role' existe com certeza, inserimos o admin
+    // Admin Default
     await sql(`INSERT INTO users (email, password, name, role) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO', 'ADMIN') ON CONFLICT (email) DO NOTHING;`);
 
-    console.log('Neon SQL: Banco de dados sincronizado.');
+    console.log('Neon SQL: Sincronizado.');
   } catch (error) {
     console.error('Neon SQL Init Error:', error);
   }
@@ -134,22 +134,20 @@ export const NeonService = {
 
   // AUTH
   async login(email: string, password: string) {
-    // Tenta primeiro como Admin
     const admins = await sql('SELECT id, email, name, role FROM users WHERE email = $1 AND password = $2', [email, password]);
     if (admins.length > 0) return admins[0];
 
-    // Se não for admin, tenta como Vendedor
     const sellers = await sql('SELECT id, email, name, address, approved, active FROM sellers WHERE email = $1 AND password = $2', [email, password]);
     if (sellers.length > 0) {
-      const seller = sellers[0];
-      if (!seller.approved) throw new Error('Seu cadastro ainda não foi aprovado pelo administrador.');
-      if (!seller.active) throw new Error('Seu acesso foi bloqueado pelo administrador.');
-      return { ...seller, role: 'SELLER' };
+      const s = sellers[0];
+      if (!s.approved) throw new Error('Aguarde a aprovação do administrador para logar.');
+      if (!s.active) throw new Error('Seu acesso foi suspenso.');
+      return { ...s, role: 'SELLER' };
     }
     return null;
   },
 
-  // SETTINGS & PRODUCTS
+  // PRODUCTS & SETTINGS
   async getProducts() { return await sql('SELECT * FROM products ORDER BY name ASC'); },
   async addProduct(p: any) {
     const res = await sql(`INSERT INTO products (name, description, price, photo, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`, [p.name, p.description, p.price, p.photo, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
