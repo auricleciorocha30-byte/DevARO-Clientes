@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UserPlus, CheckCircle, XCircle, Trash2, Edit3, Mail, MapPin, Copy, Check, Search, UserCheck, X, ShieldAlert } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Trash2, Edit3, Mail, MapPin, Copy, Check, Search, UserCheck, X, ShieldAlert, UserX, UserCheck2 } from 'lucide-react';
 import { Seller } from '../types';
 
 interface SellersManagerProps {
@@ -16,15 +16,7 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
-  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', address: '' });
-
-  const handleCopyLink = () => {
-    const url = window.location.origin + window.location.pathname + '?view=seller_register';
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const filtered = sellers.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -34,66 +26,57 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
       await onUpdateSeller(editingSeller.id, { ...editingSeller, ...formData });
       setEditingSeller(null);
     } else {
-      await onAddSeller({ ...formData, approved: isAdmin, active: true }); // Admin cadastra já aprovado
+      await onAddSeller({ ...formData, approved: true, active: true }); 
     }
     setIsAdding(false);
     setFormData({ name: '', email: '', password: '', address: '' });
   };
 
-  const startEdit = (seller: Seller) => {
-    setEditingSeller(seller);
-    setFormData({ name: seller.name, email: seller.email, password: '', address: seller.address });
-    setIsAdding(true);
-  };
+  if (!isAdmin) return null;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
-            placeholder="Buscar parceiro..." 
+            placeholder="Pesquisar por nome ou e-mail do vendedor..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" 
+            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" 
           />
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button onClick={handleCopyLink} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-bold border transition-all ${copied ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
-            {copied ? <Check size={20} /> : <Copy size={20} />} {copied ? 'Copiado' : 'Link Público'}
-          </button>
-          <button onClick={() => { setIsAdding(true); setEditingSeller(null); setFormData({ name: '', email: '', password: '', address: '' }); }} className="flex-1 sm:flex-none bg-blue-600 text-white px-5 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 transition-all">
-            <UserPlus size={20} /> Novo Parceiro
-          </button>
-        </div>
+        <button onClick={() => { setIsAdding(true); setEditingSeller(null); setFormData({ name: '', email: '', password: '', address: '' }); }} className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 active:scale-95 transition-all">
+          <UserPlus size={20} /> Adicionar Manualmente
+        </button>
       </div>
 
       {isAdding && (
-        <div className="bg-white p-8 rounded-[32px] border-2 border-blue-100 shadow-2xl animate-in zoom-in-95 sticky top-24 z-20">
+        <div className="bg-white p-8 rounded-[40px] border-2 border-blue-100 shadow-2xl animate-in zoom-in-95 sticky top-24 z-20">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-black">{editingSeller ? 'Editar Parceiro' : 'Cadastrar Manualmente'}</h3>
-            <button onClick={() => setIsAdding(false)} className="p-2 bg-slate-100 rounded-full"><X size={20} /></button>
+            <h3 className="text-xl font-black text-slate-900">{editingSeller ? 'Editar Vendedor' : 'Cadastrar Novo Vendedor'}</h3>
+            <button onClick={() => setIsAdding(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-all"><X size={20} /></button>
           </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome Completo</label>
-              <input required placeholder="Ex: Roberto Alencar" className="w-full px-5 py-3.5 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Vendedor</label>
+              <input required placeholder="Nome completo" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail (Login)</label>
-              <input required type="email" placeholder="email@parceiro.com" className="w-full px-5 py-3.5 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail para Login</label>
+              <input required type="email" placeholder="vendedor@devaro.com" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">{editingSeller ? 'Nova Senha (Opcional)' : 'Senha de Acesso'}</label>
-              <input required={!editingSeller} type="password" placeholder="••••••••" className="w-full px-5 py-3.5 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">{editingSeller ? 'Nova Senha (Opcional)' : 'Senha Inicial'}</label>
+              <input required={!editingSeller} type="password" placeholder="••••••••" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Localização</label>
-              <input placeholder="Cidade - UF" className="w-full px-5 py-3.5 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Cidade / UF</label>
+              <input placeholder="Ex: Fortaleza - CE" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
             </div>
-            <div className="sm:col-span-2 flex gap-3 pt-4">
-              <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all">
+            <div className="sm:col-span-2 flex gap-3 pt-4 border-t border-slate-100">
+              <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-blue-700 active:scale-[0.98] transition-all">
                 {editingSeller ? 'SALVAR ALTERAÇÕES' : 'CONCLUIR CADASTRO'}
               </button>
             </div>
@@ -103,66 +86,66 @@ const SellersManager: React.FC<SellersManagerProps> = ({ sellers, onUpdateSeller
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(seller => (
-          <div key={seller.id} className={`bg-white p-7 rounded-[32px] border shadow-sm transition-all hover:shadow-lg ${!seller.approved ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
+          <div key={seller.id} className={`bg-white p-7 rounded-[40px] border shadow-sm transition-all hover:shadow-lg ${!seller.approved ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${seller.approved ? (seller.active ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400') : 'bg-amber-100 text-amber-600'}`}>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${seller.approved ? (seller.active ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500') : 'bg-amber-100 text-amber-600'}`}>
                   {seller.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h4 className="font-black text-slate-900 leading-tight">{seller.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
+                  <h4 className="font-black text-slate-900 leading-none mb-1">{seller.name}</h4>
+                  <div className="flex items-center gap-2">
                     {!seller.approved ? (
                       <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase bg-amber-100 px-2 py-0.5 rounded-full"><ShieldAlert size={10} /> Pendente</span>
                     ) : (
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${seller.active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                        {seller.active ? 'Ativo' : 'Suspenso'}
+                        {seller.active ? 'Colaborador Ativo' : 'Acesso Banido'}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
-              {isAdmin && (
-                <div className="flex gap-1">
-                  <button onClick={() => startEdit(seller)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar Dados"><Edit3 size={18} /></button>
-                  <button onClick={() => onDeleteSeller(seller.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
-                </div>
-              )}
+              <div className="flex gap-1">
+                <button onClick={() => { setEditingSeller(seller); setFormData({ name: seller.name, email: seller.email, password: '', address: seller.address }); setIsAdding(true); }} className="p-2 text-slate-400 hover:text-blue-600 transition-all"><Edit3 size={18} /></button>
+                <button onClick={() => confirm('Excluir este vendedor permanentemente?') && onDeleteSeller(seller.id)} className="p-2 text-slate-300 hover:text-red-500 transition-all"><Trash2 size={18} /></button>
+              </div>
             </div>
 
-            <div className="space-y-2 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="space-y-2 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
                 <Mail size={14} className="text-slate-400" /> {seller.email}
               </div>
-              {seller.address && (
-                <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
-                  <MapPin size={14} className="text-slate-400" /> {seller.address}
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                <MapPin size={14} className="text-slate-400" /> {seller.address || 'Sem local informado'}
+              </div>
             </div>
 
-            {isAdmin && (
-              <div className="flex gap-2">
-                {!seller.approved ? (
-                  <button 
-                    onClick={() => onUpdateSeller(seller.id, { ...seller, approved: true, active: true })}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs shadow-lg shadow-green-600/20 active:scale-95 transition-all"
-                  >
-                    <UserCheck size={16} /> APROVAR ACESSO
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => onUpdateSeller(seller.id, { ...seller, active: !seller.active })}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-xs transition-all active:scale-95 ${seller.active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-600 text-white shadow-lg'}`}
-                  >
-                    {seller.active ? <XCircle size={16} /> : <CheckCircle size={16} />}
-                    {seller.active ? 'SUSPENDER CONTA' : 'REATIVAR CONTA'}
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="grid grid-cols-1 gap-2">
+              {!seller.approved ? (
+                <button 
+                  onClick={() => onUpdateSeller(seller.id, { ...seller, approved: true, active: true })}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-4 rounded-2xl font-black text-xs shadow-lg shadow-green-600/20 active:scale-95 transition-all"
+                >
+                  <UserCheck2 size={16} /> ACEITAR CADASTRO
+                </button>
+              ) : (
+                <button 
+                  onClick={() => onUpdateSeller(seller.id, { ...seller, active: !seller.active })}
+                  className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all active:scale-95 ${seller.active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-600 text-white shadow-lg'}`}
+                >
+                  {seller.active ? <UserX size={16} /> : <UserCheck size={16} />}
+                  {seller.active ? 'BANIR / SUSPENDER' : 'REATIVAR ACESSO'}
+                </button>
+              )}
+            </div>
           </div>
         ))}
+        {filtered.length === 0 && (
+           <div className="col-span-full py-20 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-100">
+             <UserCheck size={64} className="mx-auto text-slate-100 mb-4" />
+             <p className="text-slate-400 font-bold">Nenhum vendedor encontrado.</p>
+           </div>
+        )}
       </div>
     </div>
   );

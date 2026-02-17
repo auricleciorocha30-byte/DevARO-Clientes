@@ -20,7 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
     { id: 'clients' as View, label: 'Minhas Vendas', icon: Users },
     { id: 'catalog' as View, label: 'Apps & Links', icon: ShoppingBag },
     { id: 'messages' as View, label: 'Enviar Alertas', icon: Send, hidden: !isAdmin },
-    { id: 'sellers' as View, label: 'Vendedores', icon: UserCheck, hidden: !isAdmin }, // Só admin gerencia outros
+    { id: 'sellers' as View, label: 'Gestão Vendedores', icon: UserCheck, hidden: !isAdmin },
     { id: 'settings' as View, label: 'Configurações', icon: Settings, hidden: !isAdmin },
   ].filter(item => !item.hidden);
 
@@ -38,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
         <div className="p-7 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20"><Code2 size={24} /></div>
-            <span className="font-bold text-2xl tracking-tight">DevARO</span>
+            <span className="font-bold text-2xl tracking-tight italic">DevARO</span>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 text-slate-400 active:scale-90"><X size={24} /></button>
         </div>
@@ -55,12 +55,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, onClose
           })}
         </nav>
         <div className="p-5 border-t border-slate-800 bg-slate-900/50 space-y-4">
-          <button onClick={() => confirm('Sair do sistema?') && onLogout()} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold active:scale-95">
-            <LogOut size={22} /> Sair do Painel
+          <button onClick={() => confirm('Deseja realmente sair do sistema?') && onLogout()} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold active:scale-95">
+            <LogOut size={22} /> Encerrar Sessão
           </button>
           <div className="px-5">
-            <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">Neon SQL Online</p>
-            <p className="text-slate-400 text-xs font-medium">Memória Cache Ativa</p>
+            <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">DevARO CRM Cloud</p>
+            <p className="text-slate-400 text-xs font-medium">Versão 1.5.2 (Neon SQL)</p>
           </div>
         </div>
       </aside>

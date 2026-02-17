@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { NeonService } from '../db';
-import { Mail, Lock, LogIn, AlertCircle, Loader2, Eye, EyeOff, Code2, UserPlus, User, MapPin, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, Code2, UserPlus, User, MapPin } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (userData: any) => void;
@@ -9,7 +9,7 @@ interface LoginProps {
   onBack?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = false, onBack }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = false }) => {
   const [isRegistering, setIsRegistering] = useState(isSellerRegistration);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,15 +49,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
   if (success) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-white p-10 rounded-[40px] shadow-2xl space-y-6">
+        <div className="max-w-md w-full bg-white p-10 rounded-[40px] shadow-2xl space-y-6 animate-in zoom-in">
           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
              <UserPlus size={40} />
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Solicitação Enviada!</h2>
           <p className="text-slate-500 font-medium leading-relaxed">
-            Seu cadastro como vendedor foi recebido com sucesso. Agora, aguarde a aprovação do administrador para acessar o painel de vendas.
+            Seu cadastro como vendedor foi recebido. <br/>
+            <span className="text-blue-600 font-black uppercase text-lg">Aguarde ser aprovado</span> pelo administrador para acessar o painel.
           </p>
-          <button onClick={() => setIsRegistering(false) || setSuccess(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-all">VOLTAR PARA LOGIN</button>
+          <button onClick={() => { setIsRegistering(false); setSuccess(false); }} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-all">VOLTAR PARA LOGIN</button>
         </div>
       </div>
     );
@@ -73,12 +74,27 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
           <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-white/30 transform hover:rotate-6 transition-transform">
             <Code2 size={40} className="text-white" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">
-            {isRegistering ? 'Seja DevARO' : 'DevARO CRM'}
+          <h1 className="text-3xl font-black tracking-tight uppercase italic">
+            DevARO <span className="font-light not-italic tracking-normal opacity-80">CRM</span>
           </h1>
-          <p className="text-blue-100 mt-2 font-bold opacity-80 uppercase text-[10px] tracking-widest">
-            {isRegistering ? 'Cadastre-se para começar a vender' : 'Gestão de Clientes e Faturamento'}
+          <p className="text-blue-100 mt-2 font-bold uppercase text-[10px] tracking-widest opacity-70">
+            {isRegistering ? 'Venha crescer com a gente' : 'Gestão e Automação de Vendas'}
           </p>
+        </div>
+
+        <div className="flex border-b border-slate-100">
+          <button 
+            onClick={() => setIsRegistering(false)} 
+            className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all ${!isRegistering ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Já é colaborador?
+          </button>
+          <button 
+            onClick={() => setIsRegistering(true)} 
+            className={`flex-1 py-5 text-xs font-black uppercase tracking-widest transition-all ${isRegistering ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Cadastre-se
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
@@ -99,20 +115,20 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço Residencial</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade / Estado</label>
                 <div className="relative">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input required type="text" placeholder="Cidade / Estado" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={address} onChange={e => setAddress(e.target.value)} />
+                  <input required type="text" placeholder="Sua localização" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
               </div>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuário (E-mail)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input required type="email" placeholder="seuemail@exemplo.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={email} onChange={e => setEmail(e.target.value)} />
+              <input required type="email" placeholder="email@exemplo.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
           </div>
 
@@ -121,22 +137,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isSellerRegistration = fa
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-medium" value={password} onChange={e => setPassword(e.target.value)} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"><Eye size={20} /></button>
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
 
           <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-3">
-            {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'ENVIAR SOLICITAÇÃO' : 'ENTRAR NO PAINEL')}
+            {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'CRIAR MEU CADASTRO' : 'ACESSAR PAINEL')}
           </button>
-          
-          <div className="text-center mt-6 pt-4 border-t border-slate-100">
-            <p className="text-slate-500 text-sm font-medium mb-1">
-              {isRegistering ? 'Já é nosso colaborador?' : 'Ainda não é um colaborador?'}
-            </p>
-            <button type="button" onClick={() => setIsRegistering(!isRegistering)} className="text-sm font-black text-blue-600 underline underline-offset-4 hover:text-blue-700 transition-all uppercase tracking-tight">
-              {isRegistering ? 'Faça seu Login' : 'Cadastre-se Agora'}
-            </button>
-          </div>
         </form>
       </div>
     </div>
