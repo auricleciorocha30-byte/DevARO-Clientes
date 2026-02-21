@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin } from 'lucide-react';
-import { Client, ClientStatus, GlobalPaymentLinks, Seller } from '../types';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin, RefreshCw } from 'lucide-react';
+import { Client, ClientStatus, GlobalPaymentLinks, Seller, PaymentFrequency } from '../types';
 
 interface ClientModalProps {
   onClose: () => void;
@@ -22,6 +22,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     address: '',
     appName: '',
     monthlyValue: 0,
+    paymentFrequency: PaymentFrequency.MONTHLY,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
     paymentLink: '',
@@ -40,6 +41,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         address: (initialData as any).address || prev.address || '',
         appName: initialData.appName || prev.appName,
         monthlyValue: Number(initialData.monthlyValue) || prev.monthlyValue,
+        paymentFrequency: initialData.paymentFrequency || prev.paymentFrequency,
         dueDay: (initialData as any).dueDay || prev.dueDay || 10,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
@@ -60,7 +62,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
       const finalData = {
         ...formData,
         status: isTrial ? ClientStatus.TESTING : formData.status,
-        seller_id: formData.seller_id || null
+        seller_id: formData.seller_id || undefined
       };
       await onSave(finalData);
     } catch (err) {
@@ -181,7 +183,22 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Valor Mensal</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 flex items-center gap-1">
+                    Valor {formData.paymentFrequency === PaymentFrequency.ANNUAL ? 'Anual' : 'Mensal'}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        paymentFrequency: prev.paymentFrequency === PaymentFrequency.MONTHLY 
+                          ? PaymentFrequency.ANNUAL 
+                          : PaymentFrequency.MONTHLY
+                      }))}
+                      className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] hover:bg-blue-200 transition-colors flex items-center gap-1"
+                    >
+                      <RefreshCw size={8} />
+                      {formData.paymentFrequency === PaymentFrequency.ANNUAL ? 'Mudar p/ Mensal' : 'Mudar p/ Anual'}
+                    </button>
+                  </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600" size={16} />
                     <input

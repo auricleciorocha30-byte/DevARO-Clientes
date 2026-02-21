@@ -335,7 +335,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showSidebar = view !== 'showcase' && view !== 'seller_register';
+  const showSidebar = (view as string) !== 'showcase' && (view as string) !== 'seller_register';
 
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden font-sans">

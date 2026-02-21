@@ -1,5 +1,5 @@
 
-import { Client, ClientStatus } from './types';
+import { Client, ClientStatus, PaymentFrequency } from './types';
 
 // Adding paymentLink to satisfy the Client interface requirements which were missing in the initial data
 export const INITIAL_CLIENTS: Client[] = [
@@ -11,6 +11,7 @@ export const INITIAL_CLIENTS: Client[] = [
     address: 'Av. Paulista, 1000, São Paulo - SP',
     appName: 'Gestor Plus',
     monthlyValue: 150.00,
+    paymentFrequency: PaymentFrequency.MONTHLY,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
     paymentLink: 'https://pay.devaro.com/link1',
@@ -24,6 +25,7 @@ export const INITIAL_CLIENTS: Client[] = [
     address: 'Rua das Flores, 50, Rio de Janeiro - RJ',
     appName: 'Cardápio Digital',
     monthlyValue: 89.90,
+    paymentFrequency: PaymentFrequency.MONTHLY,
     dueDay: 5,
     status: ClientStatus.LATE,
     paymentLink: 'https://pay.devaro.com/link1',
@@ -37,6 +39,7 @@ export const INITIAL_CLIENTS: Client[] = [
     address: 'Rua Inovação, 500, Belo Horizonte - MG',
     appName: 'ERP DevARO',
     monthlyValue: 499.00,
+    paymentFrequency: PaymentFrequency.ANNUAL,
     dueDay: 25,
     status: ClientStatus.ACTIVE,
     paymentLink: 'https://pay.devaro.com/link1',

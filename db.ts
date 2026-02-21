@@ -11,6 +11,7 @@ const normalizeData = (data: any) => {
     address: String(data.address || '').trim(),
     appName: String(data.appname || data.appName || 'App Indefinido').trim(),
     monthlyValue: isNaN(parseFloat(data.monthlyvalue || data.monthlyValue)) ? 0 : parseFloat(data.monthlyvalue || data.monthlyValue),
+    paymentFrequency: String(data.payment_frequency || data.paymentFrequency || 'MONTHLY').toUpperCase(),
     dueDay: isNaN(parseInt(data.dueday || data.dueDay)) ? 10 : Math.max(1, Math.min(31, parseInt(data.dueday || data.dueDay))),
     status: String(data.status || 'ACTIVE').toUpperCase(),
     paymentLink: String(data.payment_link || data.paymentLink || '').trim(),
@@ -32,6 +33,7 @@ export const initDatabase = async () => {
         address TEXT,
         appname TEXT,
         monthlyvalue NUMERIC(10,2) DEFAULT 0,
+        payment_frequency TEXT DEFAULT 'MONTHLY',
         dueday INTEGER DEFAULT 10,
         status TEXT DEFAULT 'ACTIVE',
         payment_link TEXT,
@@ -75,6 +77,7 @@ export const initDatabase = async () => {
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS seller_id UUID;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS appname TEXT;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS monthlyvalue NUMERIC(10,2) DEFAULT 0;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS payment_frequency TEXT DEFAULT 'MONTHLY';`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS dueday INTEGER DEFAULT 10;`,
       `ALTER TABLE clients ADD COLUMN IF NOT EXISTS address TEXT;`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'ADMIN';`,
@@ -106,10 +109,10 @@ export const NeonService = {
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     const res = await sql(`
-      INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, dueday, status, payment_link, seller_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, payment_frequency, dueday, status, payment_link, seller_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, c.seller_id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.seller_id]);
     return res[0];
   },
 
@@ -117,10 +120,10 @@ export const NeonService = {
     const c = normalizeData(rawData);
     const res = await sql(`
       UPDATE clients 
-      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, dueday=$7, status=$8, payment_link=$9, seller_id=$10
-      WHERE id=$11
+      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, payment_frequency=$7, dueday=$8, status=$9, payment_link=$10, seller_id=$11
+      WHERE id=$12
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.dueDay, c.status, c.paymentLink, c.seller_id, id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.seller_id, id]);
     return res[0];
   },
 

@@ -102,7 +102,9 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
               <div>
                 <h4 className="font-bold text-slate-900 text-lg">{client.name}</h4>
                 <div className="flex flex-col gap-1">
-                   <p className="text-xs text-slate-500 font-medium">{client.appName} • R$ {client.monthlyValue.toFixed(2)}</p>
+                   <p className="text-xs text-slate-500 font-medium">
+                     {client.appName} • R$ {client.monthlyValue.toFixed(2)} <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">{client.paymentFrequency === 'ANNUAL' ? 'Anual' : 'Mensal'}</span>
+                   </p>
                    {isAdmin && (
                      <div className="flex items-center gap-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded">
                        <UserCircle size={10} /> {getSellerName(client.seller_id)}

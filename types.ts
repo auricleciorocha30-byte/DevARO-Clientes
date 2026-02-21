@@ -6,6 +6,11 @@ export enum ClientStatus {
   TESTING = 'TESTING'
 }
 
+export enum PaymentFrequency {
+  MONTHLY = 'MONTHLY',
+  ANNUAL = 'ANNUAL'
+}
+
 export enum UserRole {
   ADMIN = 'ADMIN',
   SELLER = 'SELLER'
@@ -33,6 +38,7 @@ export interface Client {
   address: string;
   appName: string;
   monthlyValue: number;
+  paymentFrequency: PaymentFrequency;
   dueDay: number;
   status: ClientStatus;
   paymentLink: string;
