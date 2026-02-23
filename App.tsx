@@ -398,18 +398,18 @@ const App: React.FC = () => {
             </div>
           ) : renderContent()}
         </div>
-
-        {isModalOpen && (
-          <ClientModal 
-            onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 
-            onSave={handleAddOrEditClient}
-            initialData={editingClient || initialClientData}
-            globalLinks={paymentLinks}
-            sellers={sellers}
-            userRole={user?.role}
-          />
-        )}
       </main>
+
+      {isModalOpen && (
+        <ClientModal 
+          onClose={() => { setIsModalOpen(false); setEditingClient(null); setInitialClientData(null); }} 
+          onSave={handleAddOrEditClient}
+          initialData={editingClient || initialClientData}
+          globalLinks={paymentLinks}
+          sellers={sellers}
+          userRole={user?.role}
+        />
+      )}
     </div>
   );
 };
