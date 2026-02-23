@@ -16,6 +16,12 @@ import NotificationBell from './components/NotificationBell';
 import Login from './components/Login';
 import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage, SellerPermissions, PaymentFrequency } from './types';
 
+const safeDate = (d: any) => {
+  if (!d) return new Date().toISOString();
+  if (d instanceof Date) return d.toISOString();
+  return String(d);
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [view, setView] = useState<View>(() => {
@@ -146,9 +152,9 @@ const App: React.FC = () => {
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
       address: c.address || '',
-      saleDate: c.sale_date || c.created_at,
+      saleDate: safeDate(c.sale_date || c.created_at),
       seller_id: c.seller_id,
-      createdAt: c.created_at || new Date().toISOString()
+      createdAt: safeDate(c.created_at)
     }));
     setClients(mapped);
   };

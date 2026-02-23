@@ -48,7 +48,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
         notes: (initialData as any).notes || prev.notes || '',
-        saleDate: (initialData as any).saleDate ? (initialData as any).saleDate.split('T')[0] : prev.saleDate,
+        saleDate: (initialData as any).saleDate ? String((initialData as any).saleDate).split('T')[0] : prev.saleDate,
         seller_id: (initialData as any).seller_id || prev.seller_id
       }));
       setIsTrial(initialData.status === ClientStatus.TESTING);
