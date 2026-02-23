@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Info, Calendar, UserCheck, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Bell, Info, Calendar, UserCheck, X, AlertCircle, Trash2, Clock } from 'lucide-react';
 import { AppMessage, Client, ClientStatus } from '../types';
 import { NeonService } from '../db';
 
@@ -31,6 +31,34 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
       date: new Date().toISOString()
     }));
 
+    // Alertas de Período de Teste
+    const trialClients = clients
+      .filter(c => c.status === ClientStatus.TESTING)
+      .map(c => {
+        const saleDate = c.saleDate ? new Date(c.saleDate) : new Date(c.createdAt);
+        const trialEndDate = new Date(saleDate);
+        trialEndDate.setDate(trialEndDate.getDate() + 7);
+        
+        const diffTime = trialEndDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 2 && diffDays >= 0) {
+          return {
+            id: `trial-${c.id}`,
+            type: 'warning',
+            title: 'Período de Teste Acabando',
+            content: `O período de teste do cliente ${c.name} encerra em ${diffDays === 0 ? 'hoje' : diffDays + ' dias'}.`,
+            icon: Clock,
+            date: new Date().toISOString(),
+            deletable: false,
+            sender: undefined,
+            realId: undefined
+          };
+        }
+        return null;
+      })
+      .filter((n): n is NonNullable<typeof n> => n !== null);
+
     // Mensagens do Admin
     const adminMsgs = messages.map(m => ({
       id: `msg-${m.id}`,
@@ -44,7 +72,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
       deletable: true
     }));
 
-    const allNotifications = [...overdueClients, ...adminMsgs].sort((a, b) => 
+    const allNotifications = [...overdueClients, ...trialClients, ...adminMsgs].sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 

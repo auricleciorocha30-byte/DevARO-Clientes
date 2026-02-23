@@ -42,6 +42,8 @@ export interface Client {
   dueDay: number;
   status: ClientStatus;
   paymentLink: string;
+  notes?: string;
+  saleDate?: string;
   seller_id?: string;
   createdAt: string;
 }

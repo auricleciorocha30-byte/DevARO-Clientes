@@ -9,15 +9,11 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) => {
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [address, setAddress] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,18 +21,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
     setError('');
     
     try {
-      if (isRegistering && !isAdminMode) {
-        await NeonService.registerSeller({
-          name, email, password, address, approved: false
-        });
-        setSuccess(true);
+      const user = await NeonService.login(email, password);
+      if (user) {
+        onLoginSuccess(user);
       } else {
-        const user = await NeonService.login(email, password);
-        if (user) {
-          onLoginSuccess(user);
-        } else {
-          setError('E-mail ou senha incorretos.');
-        }
+        setError('E-mail ou senha incorretos.');
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao processar solicitação.');
@@ -44,33 +33,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center font-sans">
-        <div className="max-w-md w-full bg-white p-10 rounded-[40px] shadow-2xl space-y-6 animate-in zoom-in border border-blue-100">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-             <CheckCircle2 size={40} />
-          </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Cadastro Enviado!</h2>
-          <div className="space-y-2">
-            <p className="text-blue-600 font-black uppercase text-xl tracking-tight">
-              Aguarde ser aprovado
-            </p>
-            <p className="text-slate-400 text-xs font-medium px-4">
-              Sua solicitação de consultor está sendo analisada por um administrador.
-            </p>
-          </div>
-          <button 
-            onClick={() => { setIsRegistering(false); setSuccess(false); }} 
-            className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl hover:bg-blue-700 active:scale-95 transition-all text-lg"
-          >
-            VOLTAR PARA LOGIN
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (isAdminMode) {
     return (
@@ -131,23 +93,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
           </p>
         </div>
 
-        <div className="flex border-b border-slate-100 bg-slate-50/50">
-          <button 
-            type="button"
-            onClick={() => setIsRegistering(false)} 
-            className={`flex-1 py-7 text-[10px] sm:text-[11px] font-black uppercase tracking-tight transition-all ${!isRegistering ? 'text-blue-600 border-b-4 border-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Já é nosso colaborador?
-          </button>
-          <button 
-            type="button"
-            onClick={() => setIsRegistering(true)} 
-            className={`flex-1 py-7 text-[10px] sm:text-[11px] font-black uppercase tracking-tight transition-all ${isRegistering ? 'text-blue-600 border-b-4 border-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Cadastre-se
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="p-10 space-y-6">
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 text-sm font-bold animate-shake">
@@ -156,64 +101,28 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
             </div>
           )}
 
-          {isRegistering ? (
-            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type="text" placeholder="Seu nome" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={name} onChange={e => setName(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail para Login</label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type="email" placeholder="vendedor@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha de Acesso</label>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Cidade/Estado)</label>
-                <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type="text" placeholder="Ex: São Paulo - SP" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={address} onChange={e => setAddress(e.target.value)} />
-                </div>
+          <div className="space-y-4 animate-in slide-in-from-left-4 duration-300">
+             <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail Cadastrado</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                <input required type="email" placeholder="seu@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             </div>
-          ) : (
-            <div className="space-y-4 animate-in slide-in-from-left-4 duration-300">
-               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail Cadastrado</label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type="email" placeholder="seu@email.com" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={email} onChange={e => setEmail(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
-                  <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={20} />
+                <input required type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 font-bold" value={password} onChange={e => setPassword(e.target.value)} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
-          )}
+          </div>
 
           <button disabled={loading} type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black text-xl shadow-2xl shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-3">
-            {loading ? <Loader2 className="animate-spin" size={24} /> : (isRegistering ? 'FINALIZAR CADASTRO' : 'ACESSAR PAINEL')}
+            {loading ? <Loader2 className="animate-spin" size={24} /> : 'ACESSAR PAINEL'}
           </button>
         </form>
       </div>

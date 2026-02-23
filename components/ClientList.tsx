@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, Plus, MessageCircle, Trash2, Users, ChevronDown, Edit2, Loader2, MessageSquare, UserCircle, MapPinned } from 'lucide-react';
+import { Search, Plus, MessageCircle, Trash2, Users, ChevronDown, Edit2, Loader2, MessageSquare, UserCircle, MapPinned, StickyNote, Calendar } from 'lucide-react';
 import { Client, ClientStatus, Seller, SellerPermissions } from '../types';
 import { generatePersonalizedMessage } from '../services/geminiService';
 
@@ -94,16 +94,22 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
 
       <div className="grid grid-cols-1 gap-4">
         {filteredClients.map((client) => (
-          <div key={client.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-200 transition-all">
+          <div key={client.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
+            <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-2xl shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                 {client.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-lg">{client.name}</h4>
+                <h4 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                  {client.name}
+                </h4>
                 <div className="flex flex-col gap-1">
                    <p className="text-xs text-slate-500 font-medium">
                      {client.appName} • R$ {client.monthlyValue.toFixed(2)} <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">{client.paymentFrequency === 'ANNUAL' ? 'Anual' : 'Mensal'}</span>
+                   </p>
+                   <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                     <Calendar size={10} /> Venda: {new Date(client.saleDate || client.createdAt).toLocaleDateString('pt-BR')}
                    </p>
                    {isAdmin && (
                      <div className="flex items-center gap-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded">
@@ -188,6 +194,22 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
               </div>
             </div>
           </div>
+          
+          {client.notes && (
+            <div className="mt-3 mx-5 mb-5 p-4 bg-yellow-50 border border-yellow-100 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-2">
+              <StickyNote size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-bold text-yellow-800 uppercase tracking-wide mb-1">Anotações do Consultor</p>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{client.notes}</p>
+                {isAdmin && client.seller_id && (
+                  <p className="text-[10px] font-bold text-yellow-600/60 mt-2 uppercase flex items-center gap-1">
+                    <UserCircle size={10} /> {getSellerName(client.seller_id)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         ))}
 
         {filteredClients.length === 0 && (

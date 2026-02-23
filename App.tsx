@@ -14,7 +14,7 @@ import SellersLocation from './components/SellersLocation';
 import AdminMessages from './components/AdminMessages';
 import NotificationBell from './components/NotificationBell';
 import Login from './components/Login';
-import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage, SellerPermissions } from './types';
+import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage, SellerPermissions, PaymentFrequency } from './types';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -142,9 +142,11 @@ const App: React.FC = () => {
       ...c,
       appName: c.appname || 'App Indefinido',
       monthlyValue: Number(c.monthlyvalue || 0),
+      paymentFrequency: (c.payment_frequency || 'MONTHLY').toUpperCase() as PaymentFrequency,
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
       address: c.address || '',
+      saleDate: c.sale_date || c.created_at,
       seller_id: c.seller_id,
       createdAt: c.created_at || new Date().toISOString()
     }));
@@ -351,7 +353,12 @@ const App: React.FC = () => {
           setView={setView} 
           isOpen={isSidebarOpen} 
           onClose={() => setIsSidebarOpen(false)} 
-          onLogout={() => { localStorage.removeItem('devaro_session'); setUser(null); setView('dashboard'); }} 
+          onLogout={() => { 
+            localStorage.removeItem('devaro_session'); 
+            setUser(null); 
+            setView('dashboard');
+            window.location.reload(); // Force reload to ensure clean state
+          }} 
           role={user?.role}
         />
       )}

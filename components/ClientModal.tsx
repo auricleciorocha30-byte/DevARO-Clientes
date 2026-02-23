@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin, RefreshCw } from 'lucide-react';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin, RefreshCw, StickyNote } from 'lucide-react';
 import { Client, ClientStatus, GlobalPaymentLinks, Seller, PaymentFrequency } from '../types';
 
 interface ClientModalProps {
@@ -26,6 +26,8 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     dueDay: 10,
     status: ClientStatus.ACTIVE,
     paymentLink: '',
+    notes: '',
+    saleDate: new Date().toISOString().split('T')[0],
     seller_id: '' as string | null
   });
 
@@ -45,6 +47,8 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         dueDay: (initialData as any).dueDay || prev.dueDay || 10,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
+        notes: (initialData as any).notes || prev.notes || '',
+        saleDate: (initialData as any).saleDate ? (initialData as any).saleDate.split('T')[0] : prev.saleDate,
         seller_id: (initialData as any).seller_id || prev.seller_id
       }));
       setIsTrial(initialData.status === ClientStatus.TESTING);
@@ -213,6 +217,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                 </div>
               </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Calendar size={12} /> Dia do Vencimento (1-31)
@@ -227,6 +232,20 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                   onChange={(e) => setFormData({...formData, dueDay: parseInt(e.target.value)})}
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Calendar size={12} /> Data da Venda
+                </label>
+                <input
+                  required
+                  type="date"
+                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-black focus:ring-2 focus:ring-blue-600"
+                  value={formData.saleDate}
+                  onChange={(e) => setFormData({...formData, saleDate: e.target.value})}
+                />
+              </div>
+            </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -250,6 +269,19 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* NOTES FIELD */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <StickyNote size={12} /> Anotações Internas
+              </label>
+              <textarea
+                placeholder="Observações sobre o cliente, negociações, etc..."
+                className="w-full px-5 py-4 bg-yellow-50 border border-yellow-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none transition-all text-sm font-medium text-slate-800 min-h-[100px] resize-y"
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              />
             </div>
 
             <div className="flex items-center justify-between p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
