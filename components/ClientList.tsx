@@ -140,7 +140,7 @@ const ClientList: React.FC<ClientListProps> = ({ clients, sellers = [], onAdd, o
                 {activeMenu === client.id && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       {Object.entries(ClientStatus).map(([key, value]) => (
                         <button 
                           key={key} 

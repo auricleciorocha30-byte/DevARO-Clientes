@@ -139,23 +139,58 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => { loadData(); }, [user, view]);
+  useEffect(() => { loadData(); }, [user]);
 
   const refreshClients = async () => {
     const sellerId = user?.role === 'SELLER' ? user.id : undefined;
     const dbClients = await NeonService.getClients(sellerId);
-    const mapped = (dbClients as any[]).map(c => ({
-      ...c,
-      appName: c.appname || 'App Indefinido',
-      monthlyValue: Number(c.monthlyvalue || 0),
-      paymentFrequency: (c.payment_frequency || 'MONTHLY').toUpperCase() as PaymentFrequency,
-      dueDay: Number(c.dueday || 10),
-      paymentLink: c.payment_link || '',
-      address: c.address || '',
-      saleDate: safeDate(c.sale_date || c.created_at),
-      seller_id: c.seller_id,
-      createdAt: safeDate(c.created_at)
-    }));
+    
+    // Auto-update overdue clients
+    const today = new Date().getDate();
+    const updates: Promise<any>[] = [];
+    
+    const mapped = (dbClients as any[]).map(c => {
+      const clientStatus = (c.status || 'ACTIVE') as ClientStatus;
+      const dueDay = Number(c.dueday || 10);
+      
+      // Se estiver ATIVO e passou do dia de vencimento, marca como ATRASADO
+      // Nota: Isso roda sempre que atualiza a lista. Se o usuário mudar para ATIVO e ainda estiver vencido, vai voltar para ATRASADO no próximo refresh.
+      if (clientStatus === ClientStatus.ACTIVE && today > dueDay) {
+        updates.push(NeonService.updateClientStatus(c.id, ClientStatus.LATE));
+        // Já retorna como LATE para a UI atualizar imediatamente
+        return {
+          ...c,
+          status: ClientStatus.LATE,
+          appName: c.appname || 'App Indefinido',
+          monthlyValue: Number(c.monthlyvalue || 0),
+          paymentFrequency: (c.payment_frequency || 'MONTHLY').toUpperCase() as PaymentFrequency,
+          dueDay: dueDay,
+          paymentLink: c.payment_link || '',
+          address: c.address || '',
+          saleDate: safeDate(c.sale_date || c.created_at),
+          seller_id: c.seller_id,
+          createdAt: safeDate(c.created_at)
+        };
+      }
+
+      return {
+        ...c,
+        appName: c.appname || 'App Indefinido',
+        monthlyValue: Number(c.monthlyvalue || 0),
+        paymentFrequency: (c.payment_frequency || 'MONTHLY').toUpperCase() as PaymentFrequency,
+        dueDay: dueDay,
+        paymentLink: c.payment_link || '',
+        address: c.address || '',
+        saleDate: safeDate(c.sale_date || c.created_at),
+        seller_id: c.seller_id,
+        createdAt: safeDate(c.created_at)
+      };
+    });
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
+
     setClients(mapped);
   };
 

@@ -4,6 +4,8 @@ import { neon } from '@neondatabase/serverless';
 // Removed sslmode=require as it can cause issues with the HTTP driver in some environments
 const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4cpa7j-pooler.c-4.us-east-1.aws.neon.tech/neondb');
 
+let dbInitialized = false;
+
 const normalizeData = (data: any) => {
   return {
     name: String(data.name || 'Sem Nome').trim(),
@@ -33,6 +35,11 @@ const safeSql = async (query: string, params?: any[]) => {
 };
 
 export const initDatabase = async () => {
+  if (dbInitialized) {
+    console.log('Neon SQL: Já inicializado (Cache).');
+    return;
+  }
+
   try {
     // Test connection first
     await safeSql('SELECT 1');
@@ -113,6 +120,7 @@ export const initDatabase = async () => {
     await safeSql(`INSERT INTO users (email, password, name, role) VALUES ('admin@devaro.com', 'admin123', 'Admin DevARO', 'ADMIN') ON CONFLICT (email) DO NOTHING;`);
 
     console.log('Neon SQL: Sincronizado.');
+    dbInitialized = true;
   } catch (error) {
     console.error('Neon SQL Init Error:', error);
     // Re-throw to let the caller know initialization failed

@@ -19,17 +19,35 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
     const currentDay = today.getDate();
     
     // Alertas de Vencimento
-    const overdueClients = clients.filter(c => 
-      c.status !== ClientStatus.PAUSED && 
-      (c.dueDay === currentDay || c.status === ClientStatus.LATE)
-    ).map(c => ({
-      id: `client-${c.id}`,
-      type: 'warning',
-      title: c.dueDay === currentDay ? 'Vencimento Hoje' : 'Cobrança Pendente',
-      content: `O cliente ${c.name} (${c.appName}) tem vencimento programado para o valor de R$ ${c.monthlyValue.toFixed(2)}.`,
-      icon: Calendar,
-      date: new Date().toISOString()
-    }));
+    const overdueClients = clients.filter(c => {
+      if (c.status === ClientStatus.PAUSED) return false;
+      if (c.status === ClientStatus.LATE) return true;
+
+      const due = new Date();
+      due.setDate(c.dueDay);
+      // Se o dia de vencimento já passou neste mês, assumimos que é para o próximo (mas aqui queremos alertar ANTES)
+      // Mas se hoje é 30 e vence dia 1, precisamos tratar.
+      
+      // Simplificação: Verifica se é hoje ou amanhã
+      const todayDay = today.getDate();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(todayDay + 1);
+      const tomorrowDay = tomorrow.getDate();
+
+      return c.dueDay === todayDay || c.dueDay === tomorrowDay;
+    }).map(c => {
+      const isLate = c.status === ClientStatus.LATE;
+      const isToday = c.dueDay === currentDay;
+      
+      return {
+        id: `client-${c.id}`,
+        type: 'warning',
+        title: isLate ? 'Cliente em Atraso' : (isToday ? 'Vencimento Hoje' : 'Vence Amanhã'),
+        content: `O cliente ${c.name} (${c.appName}) ${isLate ? 'está com pagamento atrasado' : (isToday ? 'tem vencimento hoje' : 'vence amanhã')}. Valor: R$ ${c.monthlyValue.toFixed(2)}.`,
+        icon: Calendar,
+        date: new Date().toISOString()
+      };
+    });
 
     // Alertas de Período de Teste
     const trialClients = clients
