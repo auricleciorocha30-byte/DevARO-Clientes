@@ -1,22 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Info, Calendar, UserCheck, X, AlertCircle, Trash2, Clock } from 'lucide-react';
-import { AppMessage, Client, ClientStatus } from '../types';
+import { Bell, Info, Calendar, UserCheck, X, AlertCircle, Trash2, Clock, UserCircle } from 'lucide-react';
+import { AppMessage, Client, ClientStatus, Seller } from '../types';
 import { NeonService } from '../db';
 
 interface NotificationBellProps {
   messages: AppMessage[];
   clients: Client[];
+  sellers?: Seller[];
+  userRole?: string;
   onMessageDeleted: () => void;
 }
 
-const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, onMessageDeleted }) => {
+const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, sellers = [], userRole, onMessageDeleted }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+
+  const getSellerName = (sellerId?: string) => {
+    if (!sellerId) return 'Venda Direta';
+    return sellers.find(s => s.id === sellerId)?.name || 'Vendedor Desconhecido';
+  };
 
   useEffect(() => {
     const today = new Date();
     const currentDay = today.getDate();
+    const isAdmin = userRole === 'ADMIN';
     
     // Alertas de Vencimento
     const overdueClients = clients.filter(c => {
@@ -25,10 +33,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
 
       const due = new Date();
       due.setDate(c.dueDay);
-      // Se o dia de vencimento já passou neste mês, assumimos que é para o próximo (mas aqui queremos alertar ANTES)
-      // Mas se hoje é 30 e vence dia 1, precisamos tratar.
       
-      // Simplificação: Verifica se é hoje ou amanhã
       const todayDay = today.getDate();
       const tomorrow = new Date(today);
       tomorrow.setDate(todayDay + 1);
@@ -38,12 +43,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
     }).map(c => {
       const isLate = c.status === ClientStatus.LATE;
       const isToday = c.dueDay === currentDay;
+      const sellerName = isAdmin ? getSellerName(c.seller_id) : '';
       
       return {
         id: `client-${c.id}`,
         type: 'warning',
         title: isLate ? 'Cliente em Atraso' : (isToday ? 'Vencimento Hoje' : 'Vence Amanhã'),
-        content: `O cliente ${c.name} (${c.appName}) ${isLate ? 'está com pagamento atrasado' : (isToday ? 'tem vencimento hoje' : 'vence amanhã')}. Valor: R$ ${c.monthlyValue.toFixed(2)}.`,
+        content: `O cliente ${c.name} (${c.appName}) ${isLate ? 'está com pagamento atrasado' : (isToday ? 'tem vencimento hoje' : 'vence amanhã')}. Valor: R$ ${c.monthlyValue.toFixed(2)}.${isAdmin ? ` [Consultor: ${sellerName}]` : ''}`,
         icon: Calendar,
         date: new Date().toISOString()
       };
@@ -61,11 +67,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         if (diffDays <= 2 && diffDays >= 0) {
+          const sellerName = isAdmin ? getSellerName(c.seller_id) : '';
           return {
             id: `trial-${c.id}`,
             type: 'warning',
             title: 'Período de Teste Acabando',
-            content: `O período de teste do cliente ${c.name} encerra em ${diffDays === 0 ? 'hoje' : diffDays + ' dias'}.`,
+            content: `O período de teste do cliente ${c.name} encerra em ${diffDays === 0 ? 'hoje' : diffDays + ' dias'}.${isAdmin ? ` [Consultor: ${sellerName}]` : ''}`,
             icon: Clock,
             date: new Date().toISOString(),
             deletable: false,
@@ -95,7 +102,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ messages, clients, 
     );
 
     setNotifications(allNotifications);
-  }, [messages, clients]);
+  }, [messages, clients, sellers, userRole]);
 
   const handleDeleteMessage = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
