@@ -59,7 +59,9 @@ export interface AppMessage {
 export enum PaymentMethod {
   LINK = 'LINK',
   PIX = 'PIX',
-  DELIVERY = 'DELIVERY'
+  DELIVERY = 'DELIVERY',
+  CASH = 'DINHEIRO',
+  CARD = 'CARTÃO'
 }
 
 export interface Product {
@@ -69,6 +71,8 @@ export interface Product {
   description: string;
   price: number;
   photo: string;
+  videoUrl?: string;
+  pixQrCode?: string;
   paymentMethods: PaymentMethod[];
   paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4';
   externalLink?: string; 

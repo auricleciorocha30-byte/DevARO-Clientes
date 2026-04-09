@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Image as ImageIcon, Check, ShoppingBag, Copy, X, ExternalLink, Loader2, Tag, Filter } from 'lucide-react';
+import { Plus, Trash2, Edit2, Image as ImageIcon, Check, ShoppingBag, Copy, X, ExternalLink, Loader2, Tag, Filter, Video, CreditCard, Banknote, QrCode } from 'lucide-react';
 import { Product, CatalogConfig, PaymentMethod, GlobalPaymentLinks } from '../types';
 
 interface CatalogAdminProps {
@@ -40,6 +40,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     description: '',
     price: 0,
     photo: '',
+    videoUrl: '',
+    pixQrCode: '',
     paymentMethods: [PaymentMethod.PIX],
     paymentLinkId: 'link1',
     externalLink: ''
@@ -56,6 +58,37 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     }
   };
 
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('O vídeo deve ter no máximo 5MB para upload direto. Para vídeos maiores, use um link externo.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setNewProduct({ ...newProduct, videoUrl: reader.result as string });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePixUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setNewProduct({ ...newProduct, pixQrCode: reader.result as string });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const togglePaymentMethod = (method: PaymentMethod) => {
+    setNewProduct(prev => {
+      const methods = prev.paymentMethods.includes(method)
+        ? prev.paymentMethods.filter(m => m !== method)
+        : [...prev.paymentMethods, method];
+      return { ...prev, paymentMethods: methods };
+    });
+  };
+
   const handleEditClick = (product: Product) => {
     if (!isAdmin) return;
     setEditingProductId(product.id);
@@ -65,6 +98,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       description: product.description,
       price: product.price,
       photo: product.photo,
+      videoUrl: product.videoUrl || '',
+      pixQrCode: product.pixQrCode || '',
       paymentMethods: product.paymentMethods,
       paymentLinkId: product.paymentLinkId || 'link1',
       externalLink: product.externalLink || ''
@@ -81,6 +116,8 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       description: '',
       price: 0,
       photo: '',
+      videoUrl: '',
+      pixQrCode: '',
       paymentMethods: [PaymentMethod.PIX],
       paymentLinkId: 'link1',
       externalLink: ''
@@ -192,6 +229,27 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição Curta</label>
                     <textarea required rows={3} placeholder="Breve descrição dos recursos" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-medium" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
                   </div>
+
+                  <div className="space-y-3 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label className="text-[10px] font-black text-slate-400 uppercase block">Formas de Pagamento</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.values(PaymentMethod).map(method => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => togglePaymentMethod(method)}
+                          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${newProduct.paymentMethods.includes(method) ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
+                        >
+                          {method === PaymentMethod.PIX && <QrCode size={14} />}
+                          {method === PaymentMethod.CARD && <CreditCard size={14} />}
+                          {method === PaymentMethod.CASH && <Banknote size={14} />}
+                          {method === PaymentMethod.LINK && <ExternalLink size={14} />}
+                          {method === PaymentMethod.DELIVERY && <ShoppingBag size={14} />}
+                          {method}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                </div>
                
                <div className="space-y-4">
@@ -203,29 +261,45 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-3">Vincular Canal de Checkout</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['link1', 'link2', 'link3', 'link4'] as const).map((id, idx) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setNewProduct({...newProduct, paymentLinkId: id})}
-                          className={`px-3 py-3 rounded-xl text-[11px] font-black border transition-all ${newProduct.paymentLinkId === id ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
-                        >
-                          CANAL {idx + 1}
-                        </button>
-                      ))}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                        {newProduct.photo ? <img src={newProduct.photo} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={24} />}
+                      </div>
+                      <label className="flex-1 cursor-pointer px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm text-center">
+                        UPLOAD FOTO
+                        <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                      </label>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                      {newProduct.photo ? <img src={newProduct.photo} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={32} />}
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                        {newProduct.pixQrCode ? <img src={newProduct.pixQrCode} className="w-full h-full object-cover" /> : <QrCode className="text-slate-300" size={24} />}
+                      </div>
+                      <label className="flex-1 cursor-pointer px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm text-center">
+                        UPLOAD QR PIX
+                        <input type="file" className="hidden" accept="image/*" onChange={handlePixUpload} />
+                      </label>
                     </div>
-                    <label className="cursor-pointer px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
-                      MUDAR FOTO
-                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
-                    </label>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                          {newProduct.videoUrl ? <Video className="text-blue-600" size={24} /> : <Video className="text-slate-300" size={24} />}
+                        </div>
+                        <label className="flex-1 cursor-pointer px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm text-center">
+                          UPLOAD VÍDEO (MAX 5MB)
+                          <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} />
+                        </label>
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="Ou cole link do vídeo (YouTube/Vimeo/MP4)" 
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600 text-[10px] font-bold" 
+                        value={newProduct.videoUrl?.startsWith('data:') ? '' : newProduct.videoUrl} 
+                        onChange={e => setNewProduct({...newProduct, videoUrl: e.target.value})} 
+                      />
+                    </div>
                   </div>
                </div>
                <div className="md:col-span-2 flex gap-3 pt-6 border-t border-slate-50">

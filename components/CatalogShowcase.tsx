@@ -1,7 +1,7 @@
 
-import React from 'react';
-import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, Info, Tag } from 'lucide-react';
-import { Product, CatalogConfig } from '../types';
+import React, { useState } from 'react';
+import { ShoppingBag, MessageSquare, MapPin, ShoppingCart, ExternalLink, Info, Tag, Play, X, QrCode, CreditCard, Banknote } from 'lucide-react';
+import { Product, CatalogConfig, PaymentMethod } from '../types';
 
 interface CatalogShowcaseProps {
   products: Product[];
@@ -11,6 +11,9 @@ interface CatalogShowcaseProps {
 }
 
 const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onSelectProduct }) => {
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedPix, setSelectedPix] = useState<string | null>(null);
+
   const handleAction = (product: Product) => {
     if (product.externalLink && product.externalLink.trim() !== '') {
       const url = product.externalLink.startsWith('http') 
@@ -84,6 +87,17 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                     <ShoppingBag size={100} />
                   </div>
                 )}
+
+                {product.videoUrl && (
+                  <button 
+                    onClick={() => setSelectedVideo(product.videoUrl!)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all"
+                  >
+                    <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center text-blue-600 shadow-2xl transform group-hover:scale-110 transition-transform">
+                      <Play size={32} fill="currentColor" />
+                    </div>
+                  </button>
+                )}
                 
                 {/* Badge de Categoria */}
                 <div className="absolute top-6 left-6">
@@ -109,11 +123,22 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Opções Disponíveis</span>
-                    <div className="flex gap-1.5 mt-1">
+                    <div className="flex flex-wrap gap-1.5 mt-1">
                       {product.paymentMethods && product.paymentMethods.length > 0 ? product.paymentMethods.map(m => (
-                        <span key={m} className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
+                        <div key={m} className="flex items-center gap-1 text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">
+                          {m === PaymentMethod.PIX && <QrCode size={10} />}
+                          {m === PaymentMethod.CARD && <CreditCard size={10} />}
+                          {m === PaymentMethod.CASH && <Banknote size={10} />}
                           {m}
-                        </span>
+                          {m === PaymentMethod.PIX && product.pixQrCode && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setSelectedPix(product.pixQrCode!); }}
+                              className="ml-1 text-blue-800 hover:underline"
+                            >
+                              (VER QR)
+                            </button>
+                          )}
+                        </div>
                       )) : (
                         <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-400 px-3 py-1 rounded-full border border-slate-200">
                           PIX / Cartão / Link
@@ -155,6 +180,42 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
           Para contratar, selecione um app e envie seu pedido pelo chat ou link seguro.
         </p>
       </footer>
+
+      {/* Modal de Vídeo */}
+      {selectedVideo && (
+        <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <button onClick={() => setSelectedVideo(null)} className="absolute top-8 right-8 text-white hover:scale-110 transition-transform"><X size={40} /></button>
+          <div className="w-full max-w-4xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl">
+            {selectedVideo.startsWith('data:') ? (
+              <video src={selectedVideo} controls autoPlay className="w-full h-full" />
+            ) : (
+              <iframe 
+                src={selectedVideo.includes('youtube.com') ? selectedVideo.replace('watch?v=', 'embed/') : selectedVideo} 
+                className="w-full h-full" 
+                allowFullScreen 
+                allow="autoplay"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de PIX */}
+      {selectedPix && (
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in zoom-in-95 duration-300">
+          <div className="bg-white p-8 rounded-[40px] max-w-sm w-full text-center space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-black uppercase tracking-tight">Pagamento via PIX</h3>
+              <button onClick={() => setSelectedPix(null)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
+            </div>
+            <div className="aspect-square bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden p-4">
+              <img src={selectedPix} alt="QR Code PIX" className="w-full h-full object-contain" />
+            </div>
+            <p className="text-xs text-slate-500 font-medium">Escaneie o código acima para realizar o pagamento instantâneo.</p>
+            <button onClick={() => setSelectedPix(null)} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-all">FECHAR</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
