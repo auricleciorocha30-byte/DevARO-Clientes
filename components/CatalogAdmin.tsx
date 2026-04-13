@@ -40,7 +40,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     description: '',
     price: 0,
     photo: '',
-    videoUrl: '',
+    videoUrls: [],
     pixQrCode: '',
     paymentMethods: [PaymentMethod.PIX],
     paymentLinkId: 'link1',
@@ -61,14 +61,20 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('O vídeo deve ter no máximo 5MB para upload direto. Para vídeos maiores, use um link externo.');
+      if (file.size > 50 * 1024 * 1024) {
+        alert('O vídeo deve ter no máximo 50MB para upload direto. Para vídeos maiores, use um link externo.');
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => setNewProduct({ ...newProduct, videoUrl: reader.result as string });
+      reader.onloadend = () => setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), reader.result as string] });
       reader.readAsDataURL(file);
     }
+  };
+
+  const removeVideo = (index: number) => {
+    const updated = [...(newProduct.videoUrls || [])];
+    updated.splice(index, 1);
+    setNewProduct({ ...newProduct, videoUrls: updated });
   };
 
   const handlePixUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +104,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       description: product.description,
       price: product.price,
       photo: product.photo,
-      videoUrl: product.videoUrl || '',
+      videoUrls: product.videoUrls || (product.videoUrl ? [product.videoUrl] : []),
       pixQrCode: product.pixQrCode || '',
       paymentMethods: product.paymentMethods,
       paymentLinkId: product.paymentLinkId || 'link1',
@@ -116,7 +122,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       description: '',
       price: 0,
       photo: '',
-      videoUrl: '',
+      videoUrls: [],
       pixQrCode: '',
       paymentMethods: [PaymentMethod.PIX],
       paymentLinkId: 'link1',
@@ -143,10 +149,10 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     }
   };
 
-  const handleCopyLink = (product: Product) => {
-    const link = globalLinks[product.paymentLinkId as keyof GlobalPaymentLinks] || 'Link não configurado';
-    navigator.clipboard.writeText(link);
-    setCopiedId(product.id);
+  const handleCopyShowcaseLink = (product: Product) => {
+    const url = window.location.origin + window.location.pathname + '?view=showcase&product=' + product.id;
+    navigator.clipboard.writeText(url);
+    setCopiedId('showcase-' + product.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -285,20 +291,52 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     <div className="space-y-2">
                       <div className="flex items-center gap-4">
                         <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                          {newProduct.videoUrl ? <Video className="text-blue-600" size={24} /> : <Video className="text-slate-300" size={24} />}
+                          {newProduct.videoUrls?.length ? <Video className="text-blue-600" size={24} /> : <Video className="text-slate-300" size={24} />}
                         </div>
                         <label className="flex-1 cursor-pointer px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm text-center">
-                          UPLOAD VÍDEO (MAX 5MB)
+                          UPLOAD VÍDEO (MAX 50MB)
                           <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} />
                         </label>
                       </div>
-                      <input 
-                        type="text" 
-                        placeholder="Ou cole link do vídeo (YouTube/Vimeo/MP4)" 
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600 text-[10px] font-bold" 
-                        value={newProduct.videoUrl?.startsWith('data:') ? '' : newProduct.videoUrl} 
-                        onChange={e => setNewProduct({...newProduct, videoUrl: e.target.value})} 
-                      />
+
+                      {newProduct.videoUrls && newProduct.videoUrls.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {newProduct.videoUrls.map((v, idx) => (
+                            <div key={idx} className="relative w-16 h-16 bg-black rounded-lg overflow-hidden group">
+                              {v.startsWith('data:') ? (
+                                <video src={v} className="w-full h-full object-cover opacity-50" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-white text-[8px] break-all p-1 text-center">Link Externo</div>
+                              )}
+                              <button type="button" onClick={() => removeVideo(idx)} className="absolute inset-0 flex items-center justify-center bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="Ou cole link do vídeo (YouTube/Vimeo/MP4)" 
+                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600 text-[10px] font-bold" 
+                          id="videoLinkInput"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('videoLinkInput') as HTMLInputElement;
+                            if (input.value) {
+                              setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), input.value] });
+                              input.value = '';
+                            }
+                          }}
+                          className="px-4 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl text-[10px]"
+                        >
+                          ADD
+                        </button>
+                      </div>
                     </div>
                   </div>
                </div>
@@ -350,13 +388,15 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Assinatura</span>
                     <span className="text-blue-600 font-black text-2xl">R$ {product.price.toFixed(2)}</span>
                   </div>
-                  <button 
-                    onClick={() => handleCopyLink(product)}
-                    className={`px-5 py-3 rounded-2xl font-black text-xs transition-all flex items-center gap-2 shadow-lg active:scale-95 ${copiedId === product.id ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-blue-600'}`}
-                  >
-                    {copiedId === product.id ? <Check size={16} /> : <Copy size={16} />}
-                    {copiedId === product.id ? 'COPIADO' : 'COPIAR LINK'}
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => handleCopyShowcaseLink(product)}
+                      className={`w-full px-5 py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${copiedId === 'showcase-' + product.id ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-blue-600'}`}
+                    >
+                      {copiedId === 'showcase-' + product.id ? <Check size={16} /> : <Copy size={16} />}
+                      {copiedId === 'showcase-' + product.id ? 'COPIADO' : 'LINK DO ENCARTE'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

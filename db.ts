@@ -94,7 +94,7 @@ export const initDatabase = async () => {
     `);
 
     await safeSql(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, name TEXT, role TEXT DEFAULT 'ADMIN', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);`);
-    await safeSql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, category TEXT, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, video_url TEXT, pix_qr_code TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
+    await safeSql(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, category TEXT, description TEXT, price NUMERIC(10,2) DEFAULT 0, photo TEXT, video_url TEXT, video_urls JSONB DEFAULT '[]'::jsonb, pix_qr_code TEXT, payment_methods JSONB DEFAULT '[]'::jsonb, payment_link_id TEXT DEFAULT 'link1', external_link TEXT);`);
     await safeSql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value JSONB);`);
 
     // Migrations to ensure all columns exist
@@ -114,6 +114,7 @@ export const initDatabase = async () => {
       `ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS video_urls JSONB DEFAULT '[]'::jsonb;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS pix_qr_code TEXT;`
     ];
     
@@ -212,13 +213,13 @@ export const NeonService = {
     return await safeSql('DELETE FROM messages WHERE id=$1', [id]);
   },
 
-  async getProducts() { return await safeSql('SELECT id, name, category, description, price, photo, video_url as "videoUrl", pix_qr_code as "pixQrCode", payment_methods as "paymentMethods", payment_link_id as "paymentLinkId", external_link as "externalLink" FROM products ORDER BY name ASC'); },
+  async getProducts() { return await safeSql('SELECT id, name, category, description, price, photo, video_url as "videoUrl", video_urls as "videoUrls", pix_qr_code as "pixQrCode", payment_methods as "paymentMethods", payment_link_id as "paymentLinkId", external_link as "externalLink" FROM products ORDER BY name ASC'); },
   async addProduct(p: any) {
-    const res = await safeSql(`INSERT INTO products (name, category, description, price, photo, video_url, pix_qr_code, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, p.videoUrl || null, p.pixQrCode || null, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
+    const res = await safeSql(`INSERT INTO products (name, category, description, price, photo, video_url, video_urls, pix_qr_code, payment_methods, payment_link_id, external_link) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, p.videoUrl || null, JSON.stringify(p.videoUrls || []), p.pixQrCode || null, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink]);
     return res[0];
   },
   async updateProduct(id: string, p: any) {
-    const res = await safeSql(`UPDATE products SET name=$1, category=$2, description=$3, price=$4, photo=$5, video_url=$6, pix_qr_code=$7, payment_methods=$8, payment_link_id=$9, external_link=$10 WHERE id=$11 RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, p.videoUrl || null, p.pixQrCode || null, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
+    const res = await safeSql(`UPDATE products SET name=$1, category=$2, description=$3, price=$4, photo=$5, video_url=$6, video_urls=$7, pix_qr_code=$8, payment_methods=$9, payment_link_id=$10, external_link=$11 WHERE id=$12 RETURNING *`, [p.name, p.category || 'Geral', p.description, p.price, p.photo, p.videoUrl || null, JSON.stringify(p.videoUrls || []), p.pixQrCode || null, JSON.stringify(p.paymentMethods || []), p.paymentLinkId, p.externalLink, id]);
     return res[0];
   },
   async deleteProduct(id: string) { return await safeSql('DELETE FROM products WHERE id=$1', [id]); },

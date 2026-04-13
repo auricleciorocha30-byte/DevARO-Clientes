@@ -14,6 +14,10 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedPix, setSelectedPix] = useState<string | null>(null);
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const productIdParam = urlParams.get('product');
+  const displayProducts = productIdParam ? products.filter(p => p.id === productIdParam) : products;
+
   const handleAction = (product: Product) => {
     if (product.externalLink && product.externalLink.trim() !== '') {
       const url = product.externalLink.startsWith('http') 
@@ -72,12 +76,12 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
         <div className="flex items-center justify-between px-4">
           <h2 className="text-2xl font-black text-slate-900">Catálogo Disponível</h2>
           <div className="flex items-center gap-2 bg-slate-200/50 px-3 py-1 rounded-lg">
-            <span className="text-[10px] font-black text-slate-500 uppercase">{products.length} {products.length === 1 ? 'App' : 'Apps'}</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase">{displayProducts.length} {displayProducts.length === 1 ? 'App' : 'Apps'}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          {products.map(product => (
+          {displayProducts.map(product => (
             <div key={product.id} className="bg-white rounded-[40px] overflow-hidden shadow-xl border border-slate-100 flex flex-col hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1">
               <div className="h-72 relative bg-slate-50 group">
                 {product.photo ? (
@@ -88,7 +92,20 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                   </div>
                 )}
 
-                {product.videoUrl && (
+                {product.videoUrls && product.videoUrls.length > 0 ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all gap-2">
+                    {product.videoUrls.map((v, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => setSelectedVideo(v)}
+                        className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-blue-600 shadow-2xl transform hover:scale-110 transition-transform"
+                        title={`Ver Vídeo ${idx + 1}`}
+                      >
+                        <Play size={24} fill="currentColor" />
+                      </button>
+                    ))}
+                  </div>
+                ) : product.videoUrl && (
                   <button 
                     onClick={() => setSelectedVideo(product.videoUrl!)}
                     className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all"
@@ -160,7 +177,7 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
           ))}
         </div>
 
-        {products.length === 0 && (
+        {displayProducts.length === 0 && (
           <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-200 animate-pulse">
             <ShoppingCart className="mx-auto text-slate-100 mb-6" size={80} />
             <p className="text-slate-400 font-black text-xl">Buscando Soluções...</p>

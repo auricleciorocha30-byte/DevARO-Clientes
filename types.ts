@@ -71,7 +71,8 @@ export interface Product {
   description: string;
   price: number;
   photo: string;
-  videoUrl?: string;
+  videoUrl?: string; // Legacy
+  videoUrls?: string[];
   pixQrCode?: string;
   paymentMethods: PaymentMethod[];
   paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4';
