@@ -64,6 +64,11 @@ export enum PaymentMethod {
   CARD = 'CARTÃO'
 }
 
+export interface ProductVideo {
+  url: string;
+  title: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -72,7 +77,7 @@ export interface Product {
   price: number;
   photo: string;
   videoUrl?: string; // Legacy
-  videoUrls?: string[];
+  videoUrls?: (string | ProductVideo)[];
   pixQrCode?: string;
   paymentMethods: PaymentMethod[];
   paymentLinkId: 'link1' | 'link2' | 'link3' | 'link4';

@@ -93,17 +93,23 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                 )}
 
                 {product.videoUrls && product.videoUrls.length > 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all gap-2">
-                    {product.videoUrls.map((v, idx) => (
-                      <button 
-                        key={idx}
-                        onClick={() => setSelectedVideo(v)}
-                        className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-blue-600 shadow-2xl transform hover:scale-110 transition-transform"
-                        title={`Ver Vídeo ${idx + 1}`}
-                      >
-                        <Play size={24} fill="currentColor" />
-                      </button>
-                    ))}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all gap-2 p-4">
+                    {product.videoUrls.map((v, idx) => {
+                      const videoObj = typeof v === 'string' ? { url: v, title: 'Vídeo' } : v;
+                      return (
+                        <button 
+                          key={idx}
+                          onClick={() => setSelectedVideo(videoObj.url)}
+                          className="w-full max-w-[200px] bg-white/90 rounded-xl flex items-center gap-3 p-2 text-blue-600 shadow-2xl transform hover:scale-105 transition-transform"
+                          title={`Ver ${videoObj.title}`}
+                        >
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Play size={16} fill="currentColor" />
+                          </div>
+                          <span className="text-xs font-bold truncate text-slate-800">{videoObj.title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : product.videoUrl && (
                   <button 

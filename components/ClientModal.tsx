@@ -32,6 +32,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
   });
 
   const [isTrial, setIsTrial] = useState(false);
+  const isFromShowcase = initialData && !('id' in initialData) && initialData.appName;
 
   useEffect(() => {
     if (initialData) {
@@ -65,6 +66,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     try {
       const finalData = {
         ...formData,
+        monthlyValue: Number.isNaN(formData.monthlyValue) ? 0 : formData.monthlyValue,
         status: isTrial ? ClientStatus.TESTING : formData.status,
         seller_id: formData.seller_id || undefined
       };
@@ -181,9 +183,10 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                     required
                     type="text"
                     placeholder="Ex: App Delivery"
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-bold focus:ring-2 focus:ring-blue-600"
+                    className={`w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-bold focus:ring-2 focus:ring-blue-600 ${isFromShowcase ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
                     value={formData.appName}
                     onChange={(e) => setFormData({...formData, appName: e.target.value})}
+                    disabled={!!isFromShowcase}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -209,9 +212,10 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
                       required
                       type="number"
                       step="0.01"
-                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-black focus:ring-2 focus:ring-blue-600"
-                      value={formData.monthlyValue}
+                      className={`w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-slate-900 font-black focus:ring-2 focus:ring-blue-600 ${isFromShowcase ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
+                      value={Number.isNaN(formData.monthlyValue) ? '' : formData.monthlyValue}
                       onChange={(e) => setFormData({...formData, monthlyValue: parseFloat(e.target.value)})}
+                      disabled={!!isFromShowcase}
                     />
                   </div>
                 </div>

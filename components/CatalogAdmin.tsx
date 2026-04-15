@@ -66,7 +66,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), reader.result as string] });
+      reader.onloadend = () => setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), { url: reader.result as string, title: 'Novo Vídeo' }] });
       reader.readAsDataURL(file);
     }
   };
@@ -104,7 +104,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
       description: product.description,
       price: product.price,
       photo: product.photo,
-      videoUrls: product.videoUrls || (product.videoUrl ? [product.videoUrl] : []),
+      videoUrls: product.videoUrls ? product.videoUrls.map(v => typeof v === 'string' ? { url: v, title: 'Vídeo' } : v) : (product.videoUrl ? [{ url: product.videoUrl, title: 'Vídeo' }] : []),
       pixQrCode: product.pixQrCode || '',
       paymentMethods: product.paymentMethods,
       paymentLinkId: product.paymentLinkId || 'link1',
@@ -135,10 +135,14 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
     if (!isAdmin) return;
     setIsSaving(true);
     try {
+      const productData = {
+        ...newProduct,
+        price: Number.isNaN(newProduct.price) ? 0 : newProduct.price
+      };
       if (editingProductId) {
-        await onUpdateProduct(editingProductId, newProduct);
+        await onUpdateProduct(editingProductId, productData);
       } else {
-        await onAddProduct(newProduct);
+        await onAddProduct(productData);
       }
       resetForm();
     } catch (error: any) {
@@ -263,7 +267,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor da Assinatura</label>
                     <div className="relative">
                       <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">R$</span>
-                      <input required type="number" step="0.01" className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black" value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
+                      <input required type="number" step="0.01" className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black" value={Number.isNaN(newProduct.price) ? '' : newProduct.price} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
                     </div>
                   </div>
 
@@ -300,19 +304,37 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                       </div>
 
                       {newProduct.videoUrls && newProduct.videoUrls.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {newProduct.videoUrls.map((v, idx) => (
-                            <div key={idx} className="relative w-16 h-16 bg-black rounded-lg overflow-hidden group">
-                              {v.startsWith('data:') ? (
-                                <video src={v} className="w-full h-full object-cover opacity-50" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-white text-[8px] break-all p-1 text-center">Link Externo</div>
-                              )}
-                              <button type="button" onClick={() => removeVideo(idx)} className="absolute inset-0 flex items-center justify-center bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ))}
+                        <div className="flex flex-col gap-3 mt-4">
+                          {newProduct.videoUrls.map((v, idx) => {
+                            const videoObj = typeof v === 'string' ? { url: v, title: 'Vídeo' } : v;
+                            return (
+                              <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                                <div className="relative w-16 h-16 bg-black rounded-lg overflow-hidden shrink-0">
+                                  {videoObj.url.startsWith('data:') ? (
+                                    <video src={videoObj.url} className="w-full h-full object-cover opacity-50" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-800 text-white text-[8px] break-all p-1 text-center">Link Externo</div>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <input 
+                                    type="text" 
+                                    value={videoObj.title}
+                                    onChange={(e) => {
+                                      const updated = [...(newProduct.videoUrls || [])];
+                                      updated[idx] = { url: videoObj.url, title: e.target.value };
+                                      setNewProduct({ ...newProduct, videoUrls: updated });
+                                    }}
+                                    placeholder="Título do vídeo"
+                                    className="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600"
+                                  />
+                                </div>
+                                <button type="button" onClick={() => removeVideo(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                  <X size={20} />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -328,7 +350,7 @@ const CatalogAdmin: React.FC<CatalogAdminProps> = ({
                           onClick={() => {
                             const input = document.getElementById('videoLinkInput') as HTMLInputElement;
                             if (input.value) {
-                              setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), input.value] });
+                              setNewProduct({ ...newProduct, videoUrls: [...(newProduct.videoUrls || []), { url: input.value, title: 'Novo Vídeo' }] });
                               input.value = '';
                             }
                           }}
