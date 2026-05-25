@@ -14,6 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loginRole, setLoginRole] = useState<'ADMIN' | 'SELLER' | 'CLIENT'>(isAdminMode ? 'ADMIN' : 'SELLER');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,16 +82,30 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isAdminMode = false }) =>
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       
       <div className="w-full max-w-md bg-white rounded-[40px] shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in duration-500 border border-slate-100">
-        <div className="p-10 pt-12 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-white/30 transform hover:rotate-6 transition-transform">
-            <Code2 size={40} className="text-white" />
+        <div className="p-10 pb-6 text-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative">
+          <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl border border-white/30 transform hover:rotate-6 transition-transform">
+            <Code2 size={32} className="text-white" />
           </div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase italic leading-none">
+          <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">
             DevARO <span className="font-light not-italic tracking-normal opacity-80">CRM</span>
           </h1>
-          <p className="text-blue-100 mt-3 font-bold uppercase text-[10px] tracking-[0.3em] opacity-80 uppercase">
-            Portal do Vendedor
-          </p>
+          
+          <div className="flex bg-black/20 p-1 rounded-2xl mt-6 border border-white/10">
+            <button 
+              type="button" 
+              onClick={() => setLoginRole('SELLER')}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${loginRole === 'SELLER' ? 'bg-white text-blue-600 shadow-lg' : 'text-white/60 hover:text-white'}`}
+            >
+              Consultor
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setLoginRole('CLIENT')}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${loginRole === 'CLIENT' ? 'bg-white text-blue-600 shadow-lg' : 'text-white/60 hover:text-white'}`}
+            >
+              Lojista
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-10 space-y-6">

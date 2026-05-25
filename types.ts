@@ -13,7 +13,8 @@ export enum PaymentFrequency {
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  SELLER = 'SELLER'
+  SELLER = 'SELLER',
+  CLIENT = 'CLIENT'
 }
 
 export interface Seller {
@@ -45,6 +46,8 @@ export interface Client {
   notes?: string;
   saleDate?: string;
   seller_id?: string;
+  password?: string;
+  paid_until?: string;
   createdAt: string;
 }
 
@@ -101,4 +104,10 @@ export interface SellerPermissions {
   canDeleteClients: boolean;
 }
 
-export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages' | 'sellers_location';
+export interface AsaasConfig {
+  apiKey: string;
+  apiUrl: string;
+  webhookToken: string;
+}
+
+export type View = 'dashboard' | 'clients' | 'catalog' | 'showcase' | 'settings' | 'sellers' | 'seller_register' | 'messages' | 'sellers_location' | 'client_portal';

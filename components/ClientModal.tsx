@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin, RefreshCw, StickyNote } from 'lucide-react';
+import { X, Loader2, CheckCircle2, DollarSign, Clock, ShieldCheck, Info, Link as LinkIcon, UserCircle, Calendar, MapPin, RefreshCw, StickyNote, Lock } from 'lucide-react';
 import { Client, ClientStatus, GlobalPaymentLinks, Seller, PaymentFrequency } from '../types';
 
 interface ClientModalProps {
@@ -27,6 +27,8 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     status: ClientStatus.ACTIVE,
     paymentLink: '',
     notes: '',
+    password: '',
+    paid_until: undefined as string | undefined,
     saleDate: new Date().toISOString().split('T')[0],
     seller_id: '' as string | null
   });
@@ -49,6 +51,8 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
         status: initialData.status || prev.status,
         paymentLink: initialData.paymentLink || prev.paymentLink || globalLinks.link1,
         notes: (initialData as any).notes || prev.notes || '',
+        password: (initialData as any).password || prev.password || '',
+        paid_until: (initialData as any).paid_until || prev.paid_until || null,
         saleDate: (initialData as any).saleDate ? String((initialData as any).saleDate).split('T')[0] : prev.saleDate,
         seller_id: (initialData as any).seller_id || prev.seller_id
       }));
@@ -64,8 +68,16 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
     
     setIsSaving(true);
     try {
+      let paidUntil = formData.paid_until;
+      if (!initialData?.id && isTrial) {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        paidUntil = d.toISOString();
+      }
+
       const finalData = {
         ...formData,
+        paid_until: paidUntil || undefined,
         monthlyValue: Number.isNaN(formData.monthlyValue) ? 0 : formData.monthlyValue,
         status: isTrial ? ClientStatus.TESTING : formData.status,
         seller_id: formData.seller_id || undefined
@@ -276,6 +288,21 @@ const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialData,
             </div>
 
             {/* NOTES FIELD */}
+            <div className="space-y-1.5 border-t border-slate-100 pt-6">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Lock size={12} /> Senha de Acesso do Lojista
+              </label>
+              <input
+                required
+                type="text"
+                placeholder="Defina uma senha para o cliente"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-bold text-slate-900"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+              <p className="text-[9px] text-slate-400 font-medium ml-1">Esta senha será usada pelo cliente para acessar o Portal do Lojista.</p>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <StickyNote size={12} /> Anotações Internas

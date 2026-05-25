@@ -6,7 +6,7 @@ const sql = neon('postgresql://neondb_owner:npg_pa2dkjo1NecB@ep-autumn-dream-ai4
 
 let dbInitialized = false;
 
-const normalizeData = (data: any) => {
+    const normalizeData = (data: any) => {
   return {
     name: String(data.name || 'Sem Nome').trim(),
     email: String(data.email || '').trim().toLowerCase(),
@@ -20,7 +20,9 @@ const normalizeData = (data: any) => {
     paymentLink: String(data.payment_link || data.paymentLink || '').trim(),
     notes: String(data.notes || '').trim(),
     saleDate: data.sale_date || data.saleDate ? String(data.sale_date || data.saleDate).split('T')[0] : new Date().toISOString().split('T')[0],
-    seller_id: data.seller_id || null
+    seller_id: data.seller_id || null,
+    password: data.password || null,
+    paid_until: data.paid_until || null
   };
 };
 
@@ -115,7 +117,9 @@ export const initDatabase = async () => {
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT;`,
       `ALTER TABLE products ADD COLUMN IF NOT EXISTS video_urls JSONB DEFAULT '[]'::jsonb;`,
-      `ALTER TABLE products ADD COLUMN IF NOT EXISTS pix_qr_code TEXT;`
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS pix_qr_code TEXT;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS password TEXT;`,
+      `ALTER TABLE clients ADD COLUMN IF NOT EXISTS paid_until TIMESTAMP WITH TIME ZONE;`
     ];
     
     for (const cmd of migrations) { try { await safeSql(cmd); } catch (e) {} }
@@ -142,10 +146,10 @@ export const NeonService = {
   async addClient(rawData: any) {
     const c = normalizeData(rawData);
     const res = await safeSql(`
-      INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, payment_frequency, dueday, status, payment_link, notes, sale_date, seller_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      INSERT INTO clients (name, email, whatsapp, address, appname, monthlyvalue, payment_frequency, dueday, status, payment_link, notes, sale_date, seller_id, password, paid_until)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.notes, c.saleDate, c.seller_id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.notes, c.saleDate, c.seller_id, c.password, c.paid_until]);
     return res[0];
   },
 
@@ -153,10 +157,10 @@ export const NeonService = {
     const c = normalizeData(rawData);
     const res = await safeSql(`
       UPDATE clients 
-      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, payment_frequency=$7, dueday=$8, status=$9, payment_link=$10, notes=$11, sale_date=$12, seller_id=$13
-      WHERE id=$14
+      SET name=$1, email=$2, whatsapp=$3, address=$4, appname=$5, monthlyvalue=$6, payment_frequency=$7, dueday=$8, status=$9, payment_link=$10, notes=$11, sale_date=$12, seller_id=$13, password=$14, paid_until=$15
+      WHERE id=$16
       RETURNING *
-    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.notes, c.saleDate, c.seller_id, id]);
+    `, [c.name, c.email, c.whatsapp, c.address, c.appName, c.monthlyValue, c.paymentFrequency, c.dueDay, c.status, c.paymentLink, c.notes, c.saleDate, c.seller_id, c.password, c.paid_until, id]);
     return res[0];
   },
 
@@ -198,7 +202,26 @@ export const NeonService = {
       if (!s.active) throw new Error('Seu acesso foi suspenso.');
       return { ...s, role: 'SELLER' };
     }
+
+    const clients = await safeSql('SELECT * FROM clients WHERE email = $1 AND password = $2', [email, password]);
+    if (clients.length > 0) {
+      return { ...clients[0], role: 'CLIENT' };
+    }
+
     return null;
+  },
+
+  async confirmClientPayment(clientId: string, months: number) {
+    const client = await safeSql('SELECT * FROM clients WHERE id = $1', [clientId]);
+    if (client.length === 0) throw new Error('Cliente não encontrado');
+    
+    let currentPaidUntil = client[0].paid_until ? new Date(client[0].paid_until) : new Date();
+    if (currentPaidUntil < new Date()) currentPaidUntil = new Date();
+    
+    const newPaidUntil = new Date(currentPaidUntil);
+    newPaidUntil.setMonth(newPaidUntil.getMonth() + months);
+    
+    return await safeSql('UPDATE clients SET paid_until=$1, status=$2 WHERE id=$3 RETURNING *', [newPaidUntil.toISOString(), 'ACTIVE', clientId]);
   },
 
   async getMessages(email: string) {

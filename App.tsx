@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 // Added Loader2 to the lucide-react import list
-import { Menu, Check, Save, Database, Bell, Send, Link as LinkIcon, Loader2, Map } from 'lucide-react';
+import { Menu, Check, Save, Database, Bell, Send, Link as LinkIcon, Loader2, Map, Smartphone, LogOut, Code2 } from 'lucide-react';
 import { initDatabase, NeonService } from './db';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -14,6 +14,7 @@ import SellersLocation from './components/SellersLocation';
 import AdminMessages from './components/AdminMessages';
 import NotificationBell from './components/NotificationBell';
 import Login from './components/Login';
+import ClientPortal from './components/ClientPortal';
 import { Client, ClientStatus, View, Product, CatalogConfig, GlobalPaymentLinks, Seller, UserRole, AppMessage, SellerPermissions, PaymentFrequency } from './types';
 
 const safeDate = (d: any) => {
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [paymentLinks, setPaymentLinks] = useState<GlobalPaymentLinks>({ link1: '', link2: '', link3: '', link4: '' });
   const [catalogConfig, setCatalogConfig] = useState<CatalogConfig>({ address: '', whatsapp: '', companyName: 'DevARO Apps' });
   const [sellerPermissions, setSellerPermissions] = useState<SellerPermissions>({ canDeleteClients: false });
+  const [asaasConfig, setAsaasConfig] = useState<AsaasConfig>({ apiKey: '', apiUrl: 'https://sandbox.asaas.com/api/v3', webhookToken: '' });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -106,11 +108,12 @@ const App: React.FC = () => {
 
     try {
       await initDatabase(); 
-      const [dbProducts, dbLinks, dbCatalog, dbPermissions] = await Promise.all([
+      const [dbProducts, dbLinks, dbCatalog, dbPermissions, dbAsaas] = await Promise.all([
         NeonService.getProducts(),
         NeonService.getSettings('payment_links'),
         NeonService.getSettings('catalog_config'),
-        NeonService.getSettings('seller_permissions')
+        NeonService.getSettings('seller_permissions'),
+        NeonService.getSettings('asaas_config')
       ]);
 
       if (dbProducts) {
@@ -126,6 +129,7 @@ const App: React.FC = () => {
       if (dbLinks) setPaymentLinks(dbLinks);
       if (dbCatalog) setCatalogConfig(dbCatalog);
       if (dbPermissions) setSellerPermissions(dbPermissions);
+      if (dbAsaas) setAsaasConfig(dbAsaas);
 
       if (user) {
         await refreshClients();
@@ -152,6 +156,8 @@ const App: React.FC = () => {
       dueDay: Number(c.dueday || 10),
       paymentLink: c.payment_link || '',
       address: c.address || '',
+      password: c.password || '',
+      paid_until: c.paid_until || null,
       saleDate: safeDate(c.sale_date || c.created_at),
       seller_id: c.seller_id,
       createdAt: safeDate(c.created_at)
@@ -173,7 +179,11 @@ const App: React.FC = () => {
   const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     localStorage.setItem('devaro_session', JSON.stringify(userData));
-    setView('dashboard');
+    if (userData.role === 'CLIENT') {
+      setView('client_portal');
+    } else {
+      setView('dashboard');
+    }
   };
 
   const handleAddOrEditClient = async (clientData: any) => {
@@ -259,6 +269,9 @@ const App: React.FC = () => {
             onSendMessage={async (c, r) => { await NeonService.addMessage(c, r, user.name); await refreshMessages(); showToast('Alerta enviado!'); }}
           />
         );
+      case 'client_portal': 
+        if (user?.role !== 'CLIENT') return <Dashboard clients={clients} userRole={user?.role} />;
+        return <ClientPortal client={user} messages={messages} onRefresh={loadData} />;
       case 'catalog': return (
         <CatalogAdmin 
           products={products}
@@ -309,6 +322,35 @@ const App: React.FC = () => {
             </div>
 
             <div className="bg-white p-12 rounded-[48px] shadow-sm border border-slate-100">
+              <h2 className="text-4xl font-black mb-2 tracking-tighter">Integração Asaas</h2>
+              <p className="text-slate-500 font-medium mb-8">Configure as credenciais da API do Asaas para automatizar cobranças.</p>
+              
+              <div className="grid grid-cols-1 gap-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">API Key (Gerado no Asaas)</label>
+                  <input type="password" placeholder="$asaas_..." className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={asaasConfig.apiKey} onChange={(e) => setAsaasConfig({...asaasConfig, apiKey: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">API URL</label>
+                    <input type="text" placeholder="https://sandbox.asaas.com/api/v3" className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={asaasConfig.apiUrl} onChange={(e) => setAsaasConfig({...asaasConfig, apiUrl: e.target.value})} />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Webhook Token (Opcional)</label>
+                    <input type="text" placeholder="Token de segurança do webhook" className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-bold focus:ring-4 focus:ring-blue-600/10 outline-none transition-all" value={asaasConfig.webhookToken} onChange={(e) => setAsaasConfig({...asaasConfig, webhookToken: e.target.value})} />
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={async () => { await NeonService.setSettings('asaas_config', asaasConfig); showToast('Configuração Asaas salva!'); }} 
+                className="mt-12 px-12 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xl shadow-2xl shadow-blue-500/40 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-4"
+              >
+                <Save size={28} /> SALVAR ASAAS
+              </button>
+            </div>
+
+            <div className="bg-white p-12 rounded-[48px] shadow-sm border border-slate-100">
               <h2 className="text-4xl font-black mb-2 tracking-tighter">Administração</h2>
               <p className="text-slate-500 font-medium mb-8">Gerencie permissões globais da equipe de consultoria.</p>
               
@@ -343,7 +385,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showSidebar = (view as string) !== 'showcase' && (view as string) !== 'seller_register';
+  const showSidebar = (view as string) !== 'showcase' && (view as string) !== 'seller_register' && user?.role !== 'CLIENT';
 
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900 overflow-x-hidden font-sans">
@@ -351,6 +393,21 @@ const App: React.FC = () => {
         <div className={`fixed top-10 right-10 z-[300] px-10 py-6 rounded-[32px] shadow-2xl flex items-center gap-5 animate-in slide-in-from-right-10 border-4 ${notification.type === 'success' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
            <span className="font-black tracking-tight text-xl">{notification.msg}</span>
         </div>
+      )}
+
+      {user?.role === 'CLIENT' && (
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 p-6 flex items-center justify-between">
+           <div className="flex items-center gap-3">
+             <div className="p-2.5 bg-blue-600 rounded-xl text-white"><Smartphone size={20} /></div>
+             <span className="font-black text-xl tracking-tighter italic">DevARO <span className="text-blue-600 not-italic font-light opacity-60">Client</span></span>
+           </div>
+           <button 
+            onClick={() => { localStorage.removeItem('devaro_session'); setUser(null); window.location.reload(); }}
+            className="p-3 bg-slate-100 rounded-xl text-slate-500 hover:text-red-500 transition-colors"
+           >
+             <LogOut size={20} />
+           </button>
+        </header>
       )}
 
       {showSidebar && (
@@ -397,7 +454,7 @@ const App: React.FC = () => {
           </header>
         )}
 
-        <div className={`${showSidebar ? 'p-8 lg:p-12' : ''} max-w-7xl mx-auto w-full flex-1`}>
+        <div className={`${showSidebar ? 'p-8 lg:p-12' : (user?.role === 'CLIENT' ? 'p-6 pt-28' : '')} max-w-7xl mx-auto w-full flex-1`}>
           {isLoading ? (
             <div className="flex items-center justify-center h-[70vh]">
                <Loader2 className="animate-spin text-blue-600" size={48} />
