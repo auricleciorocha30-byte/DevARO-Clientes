@@ -93,33 +93,49 @@ const CatalogShowcase: React.FC<CatalogShowcaseProps> = ({ products, config, onS
                 )}
 
                 {product.videoUrls && product.videoUrls.length > 0 ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all gap-2 p-4">
-                    {product.videoUrls.map((v, idx) => {
-                      const videoObj = typeof v === 'string' ? { url: v, title: 'Vídeo' } : v;
-                      return (
-                        <button 
-                          key={idx}
-                          onClick={() => setSelectedVideo(videoObj.url)}
-                          className="w-full max-w-[200px] bg-white/90 rounded-xl flex items-center gap-3 p-2 text-blue-600 shadow-2xl transform hover:scale-105 transition-transform"
-                          title={`Ver ${videoObj.title}`}
-                        >
-                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                            <Play size={16} fill="currentColor" />
-                          </div>
-                          <span className="text-xs font-bold truncate text-slate-800">{videoObj.title}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : product.videoUrl && (
-                  <button 
-                    onClick={() => setSelectedVideo(product.videoUrl!)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all"
-                  >
-                    <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center text-blue-600 shadow-2xl transform group-hover:scale-110 transition-transform">
-                      <Play size={32} fill="currentColor" />
+                  <>
+                    {/* Persistent Badge for Mobile */}
+                    <div className="absolute top-4 left-4 z-20 md:hidden bg-blue-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-white/20">
+                      <Play size={10} fill="currentColor" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Possui Vídeo</span>
                     </div>
-                  </button>
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-2 p-4 z-10 select-none">
+                      {product.videoUrls.map((v, idx) => {
+                        const videoObj = typeof v === 'string' ? { url: v, title: 'Vídeo' } : v;
+                        return (
+                          <button 
+                            key={idx}
+                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(videoObj.url); }}
+                            className="w-full max-w-[200px] bg-white rounded-2xl flex items-center gap-3 p-3 text-blue-600 shadow-2xl active:scale-95 transition-all"
+                            title={`Ver ${videoObj.title}`}
+                          >
+                            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                              <Play size={20} fill="currentColor" />
+                            </div>
+                            <span className="text-xs font-black truncate text-slate-800">{videoObj.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : product.videoUrl && (
+                  <>
+                    {/* Persistent Badge for Mobile (Legacy) */}
+                    <div className="absolute top-4 left-4 z-20 md:hidden bg-blue-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-white/20">
+                      <Play size={10} fill="currentColor" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Possui Vídeo</span>
+                    </div>
+
+                    <button 
+                      onClick={() => setSelectedVideo(product.videoUrl!)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/20 md:bg-black/10 md:group-hover:bg-black/40 transition-all z-10"
+                    >
+                      <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center text-blue-600 shadow-2xl transform active:scale-90 md:group-hover:scale-110 transition-transform">
+                        <Play size={32} fill="currentColor" />
+                      </div>
+                    </button>
+                  </>
                 )}
                 
                 {/* Badge de Categoria */}
